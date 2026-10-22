@@ -17,7 +17,7 @@ GitHub Action del front ──────────────────�
 
 - **El front sigue siendo estático.** Todo se descarga **al compilar**. Las fotos quedan en `src/content/fotos/api/` y Astro las procesa como cualquier otra foto local (AVIF/WebP, `srcset`, visor, imagen OG). Ningún componente `.astro` cambia.
 - **Las credenciales viven en GitHub Secrets.** El navegador nunca llama a `/api`, así que no necesita token ni CORS.
-- **Con la API, los productos son los de la API.** Un JSON de `src/content/productos/` con el mismo slug solo presta sus fotos mientras la API no tenga fotos de ese producto. Lo mismo con la galería y `galeria.json`.
+- **Con la API, los productos son los de la API.** Un JSON de `src/content/productos/` con el mismo slug solo presta sus fotos mientras la API no tenga fotos de ese producto. Lo mismo con la galería: en cuanto hay al menos una foto de `galeria` (pestaña **Así se ven** del panel), la sección "Así se ven" muestra solo esas, en su `orden`, y deja de usar `galeria.json`.
 - **Sin `API_URL` no se descarga nada** y el sitio compila como antes, con los JSON del repositorio.
 
 ---

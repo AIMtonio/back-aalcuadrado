@@ -1,4 +1,5 @@
-// Panel de aalcuadrado: inicia sesión, administra productos y sube fotos.
+// Panel de aalcuadrado: inicia sesión, administra productos y sube fotos
+// (de productos y de la sección "Así se ven").
 // Habla con la API del mismo dominio (/api). El token vive en sessionStorage:
 // se borra al cerrar la pestaña.
 
@@ -22,11 +23,13 @@ const formLogin = $('#form-login');
 const formSubir = $('#form-subir');
 const formEditar = $('#form-editar');
 const formProducto = $('#form-producto');
+const formGaleria = $('#form-galeria');
 const dialogoEditar = $('#dialogo-editar');
 const dialogoProducto = $('#dialogo-producto');
 const inputArchivos = formSubir.elements.archivos;
 const rejilla = $('#rejilla');
 const rejillaProductos = $('#rejilla-productos');
+const rejillaGaleria = $('#rejilla-galeria');
 const filtro = $('#filtro');
 
 /* ---------- Almacenamiento (puede no estar disponible) ---------- */
@@ -92,6 +95,7 @@ function cerrarSesion(mensaje = '') {
   escribir(CLAVE_TOKEN, null);
   rejilla.replaceChildren();
   rejillaProductos.replaceChildren();
+  rejillaGaleria.replaceChildren();
   for (const dialogo of [dialogoEditar, dialogoProducto]) if (dialogo.open) dialogo.close();
   $('#error-login').textContent = mensaje;
   mostrar('login');
@@ -104,7 +108,7 @@ async function entrarAlPanel() {
   mostrar('panel');
   cambiarPestana(leer(CLAVE_PESTANA) ?? 'fotos');
   await cargarCatalogo();
-  await cargarFotos();
+  await Promise.all([cargarFotos(), cargarGaleria()]);
   await cargarPublicacion();
 }
 
@@ -142,6 +146,7 @@ function cambiarPestana(nombre) {
   }
   $('#pestana-fotos').hidden = nombre !== 'fotos';
   $('#pestana-productos').hidden = nombre !== 'productos';
+  $('#pestana-galeria').hidden = nombre !== 'galeria';
   escribir(CLAVE_PESTANA, nombre);
 }
 
@@ -219,6 +224,11 @@ function avisar(texto) {
 }
 
 /* ---------- Utilidades ---------- */
+
+/** Después de subir, editar o borrar una foto: las tres vistas dependen de ella. */
+function recargar() {
+  return Promise.all([cargarFotos(), cargarGaleria(), cargarCatalogo()]);
+}
 
 /** "Rosa mexicano" → `rosa-mexicano`. Igual que `slugificar` del front y de la API. */
 function slugificar(texto) {
@@ -464,8 +474,7 @@ formProducto.addEventListener('submit', async (evento) => {
       : await api('/productos', { method: 'POST', json: datos });
     dialogoProducto.close();
     avisar(productoEditando ? 'Producto guardado' : `"${guardado.nombre}" creado`);
-    await cargarCatalogo();
-    await cargarFotos();
+    await recargar();
   } catch (e) {
     error.textContent = e.message;
   } finally {
@@ -549,30 +558,36 @@ for (const form of formulariosDeFoto) actualizarCampos(form);
 
 /* ---------- Subir ---------- */
 
-const zona = $('#zona');
-for (const tipo of ['dragenter', 'dragover']) {
-  zona.addEventListener(tipo, () => zona.classList.add('zona--encima'));
-}
-for (const tipo of ['dragleave', 'drop']) {
-  zona.addEventListener(tipo, () => zona.classList.remove('zona--encima'));
+for (const zona of document.querySelectorAll('.zona')) {
+  for (const tipo of ['dragenter', 'dragover']) {
+    zona.addEventListener(tipo, () => zona.classList.add('zona--encima'));
+  }
+  for (const tipo of ['dragleave', 'drop']) {
+    zona.addEventListener(tipo, () => zona.classList.remove('zona--encima'));
+  }
 }
 
-let urlsPrevias = [];
-function mostrarPrevias() {
-  urlsPrevias.forEach((url) => URL.revokeObjectURL(url));
-  urlsPrevias = [...inputArchivos.files].map((archivo) => URL.createObjectURL(archivo));
-  $('#previas').replaceChildren(
-    ...urlsPrevias.map((url) => {
-      const li = document.createElement('li');
-      const img = document.createElement('img');
-      img.src = url;
-      img.alt = '';
-      li.append(img);
-      return li;
-    }),
-  );
+/** Miniaturas de las fotos elegidas en `input`, dentro de `lista`. */
+function previasDe(input, lista) {
+  let urls = [];
+  const pintar = () => {
+    urls.forEach((url) => URL.revokeObjectURL(url));
+    urls = [...input.files].map((archivo) => URL.createObjectURL(archivo));
+    lista.replaceChildren(
+      ...urls.map((url) => {
+        const li = document.createElement('li');
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        li.append(img);
+        return li;
+      }),
+    );
+  };
+  input.addEventListener('change', pintar);
+  return pintar;
 }
-inputArchivos.addEventListener('change', mostrarPrevias);
+const mostrarPrevias = previasDe(inputArchivos, $('#previas'));
 
 formSubir.addEventListener('submit', async (evento) => {
   evento.preventDefault();
@@ -600,7 +615,7 @@ formSubir.addEventListener('submit', async (evento) => {
     inputArchivos.value = '';
     formSubir.elements.alt.value = '';
     mostrarPrevias();
-    await Promise.all([cargarFotos(), cargarCatalogo()]);
+    await recargar();
   } catch (e) {
     error.textContent = e.estado === 413 ? 'Una de las fotos pesa demasiado.' : e.message;
   } finally {
@@ -641,7 +656,7 @@ formEditar.addEventListener('submit', async (evento) => {
     await api(`/imagenes/${fotoEditando.id}`, { method: 'PATCH', json: datosDe(formEditar) });
     dialogoEditar.close();
     avisar('Cambios guardados');
-    await Promise.all([cargarFotos(), cargarCatalogo()]);
+    await recargar();
   } catch (e) {
     $('#error-editar').textContent = e.message;
   } finally {
@@ -659,7 +674,8 @@ function problemaDe(imagen) {
   return null;
 }
 
-function pintarFoto(imagen) {
+/** `mover(imagen, paso)`, si se pasa, muestra las flechas para cambiar el orden. */
+function pintarFoto(imagen, mover) {
   const nodo = $('#plantilla-foto').content.firstElementChild.cloneNode(true);
   $('.foto__imagen', nodo).href = imagen.url;
   const img = $('img', nodo);
@@ -672,7 +688,7 @@ function pintarFoto(imagen) {
   if (color) titulo.append(muestraDeColor(color.hex));
   const nombre = document.createElement('strong');
   nombre.textContent =
-    imagen.categoria === 'galeria' ? 'Galería' : (producto?.nombre ?? imagen.producto ?? 'Sin producto');
+    imagen.categoria === 'galeria' ? 'Así se ven' : (producto?.nombre ?? imagen.producto ?? 'Sin producto');
   titulo.append(nombre);
   const detalle = [color?.nombre ?? imagen.color, `orden ${imagen.orden}`].filter(Boolean).join(' · ');
   titulo.append(` · ${detalle}`);
@@ -687,6 +703,14 @@ function pintarFoto(imagen) {
     aviso.hidden = false;
     aviso.textContent = problema;
     aviso.classList.add('foto__problema--grave');
+  }
+
+  if (mover) {
+    for (const [accion, paso] of [['antes', -1], ['despues', 1]]) {
+      const boton = $(`[data-accion="${accion}"]`, nodo);
+      boton.hidden = false;
+      boton.addEventListener('click', () => mover(imagen, paso));
+    }
   }
 
   $('[data-accion="editar"]', nodo).addEventListener('click', () => abrirEdicion(imagen));
@@ -705,7 +729,7 @@ function pintarFoto(imagen) {
     try {
       await api(`/imagenes/${imagen.id}`, { method: 'DELETE' });
       avisar('Foto borrada');
-      await Promise.all([cargarFotos(), cargarCatalogo()]);
+      await recargar();
     } catch (e) {
       avisar(e.message);
     }
@@ -725,6 +749,83 @@ async function cargarFotos() {
 }
 
 filtro.addEventListener('change', () => cargarFotos().catch((e) => avisar(e.message)));
+
+/* ---------- Así se ven (galería) ---------- */
+
+/** Las fotos de la galería en el orden en que salen en el sitio. */
+let galeria = [];
+
+async function cargarGaleria() {
+  galeria = await api('/imagenes?categoria=galeria');
+  rejillaGaleria.replaceChildren(
+    ...galeria.map((imagen, i) => {
+      const nodo = pintarFoto(imagen, moverEnGaleria);
+      $('[data-accion="antes"]', nodo).disabled = i === 0;
+      $('[data-accion="despues"]', nodo).disabled = i === galeria.length - 1;
+      return nodo;
+    }),
+  );
+  $('#total-galeria').textContent = `(${galeria.length})`;
+  $('#nota-galeria-vacia').hidden = galeria.length > 0;
+}
+
+/** Cambia una foto de lugar y renumera todas (0, 1, 2…) para que el orden quede limpio. */
+async function moverEnGaleria(imagen, paso) {
+  const lista = [...galeria];
+  const desde = lista.findIndex((i) => i.id === imagen.id);
+  const hasta = desde + paso;
+  if (hasta < 0 || hasta >= lista.length) return;
+  [lista[desde], lista[hasta]] = [lista[hasta], lista[desde]];
+  rejillaGaleria.setAttribute('aria-busy', 'true');
+  try {
+    await Promise.all(
+      lista.map((foto, orden) =>
+        foto.orden === orden ? null : api(`/imagenes/${foto.id}`, { method: 'PATCH', json: { orden } }),
+      ),
+    );
+  } catch (e) {
+    avisar(e.message);
+  } finally {
+    rejillaGaleria.removeAttribute('aria-busy');
+    await cargarGaleria().catch((e) => avisar(e.message));
+    if (filtro.value !== 'productos') cargarFotos().catch((e) => avisar(e.message));
+  }
+}
+
+const mostrarPreviasGaleria = previasDe(formGaleria.elements.archivos, $('#previas-galeria'));
+
+formGaleria.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const input = formGaleria.elements.archivos;
+  const error = $('#error-galeria');
+  const boton = $('#boton-subir-galeria');
+  error.textContent = '';
+  if (input.files.length > 10) {
+    error.textContent = 'Sube como máximo 10 fotos por vez.';
+    return;
+  }
+
+  const datos = new FormData();
+  for (const archivo of input.files) datos.append('archivos', archivo);
+  datos.append('categoria', 'galeria');
+  // Al final de la sección: después de la que tenga el orden más alto.
+  datos.append('orden', String(galeria.reduce((max, f) => Math.max(max, f.orden + 1), 0)));
+
+  boton.disabled = true;
+  boton.textContent = 'Subiendo…';
+  try {
+    const subidas = await api('/imagenes', { method: 'POST', body: datos });
+    avisar(subidas.length === 1 ? 'Foto subida' : `${subidas.length} fotos subidas`);
+    input.value = '';
+    mostrarPreviasGaleria();
+    await recargar();
+  } catch (e) {
+    error.textContent = e.estado === 413 ? 'Una de las fotos pesa demasiado.' : e.message;
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Subir';
+  }
+});
 
 /* ---------- Inicio ---------- */
 

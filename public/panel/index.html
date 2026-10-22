@@ -33,6 +33,7 @@
         <nav class="pestanas" aria-label="Secciones">
           <button type="button" class="pestana" data-pestana="fotos" aria-current="page">Fotos</button>
           <button type="button" class="pestana" data-pestana="productos">Productos</button>
+          <button type="button" class="pestana" data-pestana="galeria">Así se ven</button>
         </nav>
         <div class="publicar" id="publicar" hidden>
           <span class="publicar__estado" id="estado-publicacion"></span>
@@ -70,7 +71,7 @@
               <select id="filtro">
                 <option value="">Todas</option>
                 <option value="productos">Productos</option>
-                <option value="galeria">Galería</option>
+                <option value="galeria">Galería ("Así se ven")</option>
                 <option value="pendientes">No se ven en el sitio</option>
               </select>
             </label>
@@ -90,6 +91,37 @@
           <ul class="rejilla" id="rejilla-productos"></ul>
         </section>
       </main>
+
+      <main class="contenido" id="pestana-galeria" hidden>
+        <section class="tarjeta" aria-labelledby="titulo-subir-galeria">
+          <h2 id="titulo-subir-galeria">Fotos de "Así se ven"</h2>
+          <p class="nota">
+            Las fotos del puesto, la caja o los aretes puestos que salen en la sección "Así se ven" del sitio.
+            Las nuevas se agregan al final; usa las flechas para cambiar el orden y luego presiona Publicar sitio.
+          </p>
+          <p class="nota nota--alerta" id="nota-galeria-vacia" hidden>
+            Todavía no hay fotos aquí, así que el sitio muestra las fotos fijas del repositorio. En cuanto subas
+            la primera, la sección muestra solo las de este panel.
+          </p>
+          <form id="form-galeria" class="subir">
+            <label class="zona" id="zona-galeria">
+              <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
+              <span class="zona__texto">Arrastra tus fotos aquí o <u>elígelas</u></span>
+              <span class="zona__ayuda">JPG, PNG, WebP o AVIF · hasta 10 por vez</span>
+            </label>
+            <ul class="previas" id="previas-galeria"></ul>
+            <p class="error" id="error-galeria" role="alert"></p>
+            <button type="submit" class="boton" id="boton-subir-galeria">Subir</button>
+          </form>
+        </section>
+
+        <section aria-labelledby="titulo-galeria">
+          <div class="barra">
+            <h2 id="titulo-galeria">En el sitio <span id="total-galeria" class="contador"></span></h2>
+          </div>
+          <ol class="rejilla" id="rejilla-galeria"></ol>
+        </section>
+      </main>
     </div>
 
     <!-- Campos de una foto: se usan al subir y al editar -->
@@ -98,7 +130,7 @@
         Categoría
         <select name="categoria" required>
           <option value="productos">Producto</option>
-          <option value="galeria">Galería (ambiente)</option>
+          <option value="galeria">Galería ("Así se ven")</option>
         </select>
       </label>
       <label data-solo-productos>
@@ -136,6 +168,8 @@
           <p class="foto__alt"></p>
           <p class="foto__problema" hidden></p>
           <div class="foto__acciones">
+            <button type="button" class="boton boton--chico boton--secundario" data-accion="antes" aria-label="Mover antes" hidden>←</button>
+            <button type="button" class="boton boton--chico boton--secundario" data-accion="despues" aria-label="Mover después" hidden>→</button>
             <button type="button" class="boton boton--chico" data-accion="editar">Editar</button>
             <button type="button" class="boton boton--chico boton--secundario" data-accion="copiar">Copiar URL</button>
             <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Borrar</button>

@@ -406,6 +406,21 @@ input:user-invalid {
   flex: 1;
 }
 
+/* Notas de la pestaña "Así se ven" */
+.nota {
+  margin: 0.25rem 0 1rem;
+  font-size: 0.875rem;
+  color: var(--lavanda);
+}
+
+.nota--alerta {
+  padding: 0.625rem 0.875rem;
+  border-left: 3px solid var(--advertencia);
+  border-radius: 0.375rem;
+  color: var(--tinta);
+  background: rgb(255 159 28 / 12%);
+}
+
 /* Catálogo del front */
 .catalogo {
   margin: 0;
