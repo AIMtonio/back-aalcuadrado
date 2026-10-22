@@ -24,6 +24,9 @@ export class DatosImagenDto {
   @vacioANull()
   @IsString()
   @MaxLength(200)
+  @Matches(/^(?!\s*https?:\/\/)/i, {
+    message: 'alt: describe la foto con palabras; no pongas una URL',
+  })
   alt?: string | null;
 
   @IsOptional()

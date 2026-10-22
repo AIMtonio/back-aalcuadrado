@@ -8,7 +8,7 @@
 -- 3. Pon la misma contraseña en DB_PASSWORD del archivo .env.
 --
 -- El usuario solo puede conectarse desde la misma máquina (localhost) y
--- solo tiene permisos de datos (leer/escribir) sobre las dos tablas que usa
+-- solo tiene permisos de datos (leer/escribir) sobre las cuatro tablas que usa
 -- la API. No puede crear, alterar ni borrar tablas, ni ver otras bases.
 -- =====================================================================
 
@@ -24,6 +24,12 @@ GRANT SELECT, INSERT, UPDATE ON aalcuadrado.usuarios TO 'aalcuadrado_api'@'127.0
 -- imagenes: lectura y escritura completas (listar, subir, editar y borrar).
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.imagenes TO 'aalcuadrado_api'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.imagenes TO 'aalcuadrado_api'@'127.0.0.1';
+
+-- productos y producto_colores: lectura y escritura completas (panel de productos).
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.productos TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.productos TO 'aalcuadrado_api'@'127.0.0.1';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.producto_colores TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.producto_colores TO 'aalcuadrado_api'@'127.0.0.1';
 
 FLUSH PRIVILEGES;
 

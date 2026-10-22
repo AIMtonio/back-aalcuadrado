@@ -9,8 +9,8 @@ import bcrypt from 'bcryptjs';
 import type { Repository } from 'typeorm';
 import { Usuario } from './usuario.entity.js';
 
-export const PASSWORD_MIN = 12;
-const COSTO_BCRYPT = 12;
+export const PASSWORD_MIN = 8;
+const COSTO_BCRYPT = 8;
 /** Hash cualquiera: se compara contra él cuando el usuario no existe, para que la respuesta tarde lo mismo. */
 const HASH_FALSO =
   '$2b$12$A9BPQUj4DaFZK8Y19W/HFenmllfEbgnnv0HlZqeDwyFiT7a.go07m';

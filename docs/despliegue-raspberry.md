@@ -95,6 +95,9 @@ sudo mariadb < database/01_crear_base_de_datos.sql
 DB_PASS=$(openssl rand -base64 24 | tr -d '/+=')
 sed "s/CAMBIA_ESTA_CONTRASENA/${DB_PASS}/g" database/02_crear_usuario_bd.sql | sudo mariadb
 echo "Contraseña de la base de datos: ${DB_PASS}"   # cópiala para el paso 7
+
+# Los productos que hoy tiene el front (se puede correr más de una vez)
+sudo mariadb < database/03_productos_iniciales.sql
 ```
 
 Revisa los permisos:
@@ -109,6 +112,8 @@ Debe mostrar solo esto (y lo mismo para `@'127.0.0.1'`):
 GRANT USAGE ON *.* TO `aalcuadrado_api`@`localhost` ...
 GRANT SELECT, INSERT, UPDATE ON `aalcuadrado`.`usuarios` TO `aalcuadrado_api`@`localhost`
 GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`imagenes` TO `aalcuadrado_api`@`localhost`
+GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`productos` TO `aalcuadrado_api`@`localhost`
+GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`producto_colores` TO `aalcuadrado_api`@`localhost`
 ```
 
 El usuario de la API **no** puede crear, alterar ni borrar tablas, ni ver otras bases, ni conectarse desde fuera de la Raspberry.
@@ -248,13 +253,18 @@ Todas las rutas de `/api` piden `Authorization: Bearer <token>`, salvo el login.
 | `POST` | `/api/auth/login` | **Pública.** `{ "usuario", "password" }` → `{ access_token, token_type, expires_in }`. Máximo 5 intentos por minuto por IP. |
 | `GET` | `/api/usuarios/yo` | Datos del usuario del token. |
 | `PATCH` | `/api/usuarios/yo/password` | `{ "passwordActual", "passwordNueva" }` → 204. |
+| `GET` | `/api/productos` | Productos con sus colores y cuántas fotos tiene cada uno. |
+| `GET` | `/api/productos/:slug` | Un producto. |
+| `POST` | `/api/productos` | Crea un producto: `nombre`, `coleccion` y, opcionales, `slug`, `descripcion`, `etiqueta`, `precio`, `disponible`, `destacado`, `orden`, `colores`. |
+| `PATCH` | `/api/productos/:slug` | Edita un producto (todo menos el slug). `colores` reemplaza la lista. |
+| `DELETE` | `/api/productos/:slug` | Borra un producto sin fotos (con fotos responde 409). |
 | `GET` | `/api/imagenes?categoria=&producto=` | Lista de fotos (filtros opcionales), por `orden`. Cada una trae su `url`. |
 | `GET` | `/api/imagenes/:id` | Una foto. |
 | `POST` | `/api/imagenes` | `multipart/form-data`: `archivos` (1 a 10), `categoria` (`productos` o `galeria`) y, opcionales, `producto`, `color`, `alt`, `orden`. |
 | `PATCH` | `/api/imagenes/:id` | Cambia `alt`, `producto`, `color`, `orden` o `categoria` (mueve el archivo de carpeta). |
 | `DELETE` | `/api/imagenes/:id` | Borra el registro y el archivo. |
 | `GET` | `/uploads/<categoria>/<archivo>` | El archivo de la foto. Público, para que `<img src>` funcione. |
-| `GET` | `/panel/` | El panel. La página es pública, pero todo lo que hace pide el token. |
+| `GET` | `/panel/` | El panel, con dos pestañas: **Fotos** (subir, editar, borrar) y **Productos** (crear, editar, borrar). La página es pública, pero todo lo que hace pide el token. |
 
 `producto` y `color` son el *slug* del producto y el *id* del color tal como los usa el front (`nochebuena`, `rojo`, `rosa-mexicano`).
 
@@ -262,70 +272,9 @@ La API revisa los primeros bytes de cada archivo: solo acepta JPG, PNG, WebP y A
 
 ## Conectar el front
 
-El front es estático (GitHub Pages) y ya está preparado para cambiar de fuente de datos en `src/data/index.ts` (ver `docs/arquitectura.md` del front). Como la lista de fotos pide token, el front la lee **al compilar**, en el GitHub Action, donde el usuario y la contraseña están guardados como *secrets* y nunca llegan al navegador. Las fotos en sí son públicas.
+Sigue [integracion-front.md](integracion-front.md). En resumen: el GitHub Action del front inicia sesión con `API_USUARIO` y `API_PASSWORD` (guardados como *secrets*), descarga los productos y las fotos (`npm run api:sincronizar`) y Astro arma el sitio con ellos. El navegador nunca llama a `/api`. Después de cambiar productos o fotos en el panel, vuelve a ejecutar el workflow del front para publicarlos.
 
-1. En el repositorio del front, *Settings → Secrets and variables → Actions*, crea `API_URL` (`https://api.tudominio.com`), `API_USUARIO` y `API_PASSWORD`.
-
-2. Pásalos al paso **Compilar** de `.github/workflows/desplegar.yml`:
-
-   ```yaml
-   - name: Compilar
-     run: npm run build
-     env:
-       SITE_URL: ${{ steps.pages.outputs.origin }}
-       BASE_PATH: ${{ steps.pages.outputs.base_path }}
-       API_URL: ${{ secrets.API_URL }}
-       API_USUARIO: ${{ secrets.API_USUARIO }}
-       API_PASSWORD: ${{ secrets.API_PASSWORD }}
-   ```
-
-3. Autoriza el dominio de las fotos en `astro.config.mjs` para que Astro las siga optimizando:
-
-   ```js
-   image: {
-     remotePatterns: [{ protocol: 'https', hostname: 'api.tudominio.com', pathname: '/uploads/**' }],
-   },
-   ```
-
-4. Un cliente mínimo, que se ejecuta solo al compilar (`src/data/api.ts`):
-
-   ```ts
-   const API_URL = import.meta.env.API_URL;
-
-   async function token(): Promise<string> {
-     const res = await fetch(`${API_URL}/api/auth/login`, {
-       method: 'POST',
-       headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ usuario: import.meta.env.API_USUARIO, password: import.meta.env.API_PASSWORD }),
-     });
-     if (!res.ok) throw new Error(`Login en la API falló: ${res.status}`);
-     return (await res.json()).access_token;
-   }
-
-   export interface ImagenApi {
-     id: number;
-     categoria: 'productos' | 'galeria';
-     url: string;
-     alt: string | null;
-     producto: string | null;
-     color: string | null;
-     orden: number;
-   }
-
-   export async function listarImagenes(filtro: { categoria?: string; producto?: string } = {}): Promise<ImagenApi[]> {
-     const res = await fetch(`${API_URL}/api/imagenes?${new URLSearchParams(filtro)}`, {
-       headers: { Authorization: `Bearer ${await token()}` },
-     });
-     if (!res.ok) throw new Error(`No pude leer las fotos: ${res.status}`);
-     return res.json();
-   }
-   ```
-
-   Con eso, `CatalogoApi` (o la galería) recibe `url` en lugar de `ImageMetadata`. En `<Image>` usa `src={foto.url}` con `inferSize` (o `width`/`height`) porque son fotos remotas.
-
-5. **Publicar los cambios:** el sitio se compila con las fotos que hay en ese momento. Después de subir fotos, en GitHub ve a *Actions → Publicar en GitHub Pages → Run workflow*.
-
-Para desarrollo local del front, crea un `.env` en el front con `API_URL=http://localhost:3000`, `API_USUARIO` y `API_PASSWORD`, con la API corriendo en tu máquina.
+Para probar los endpoints a mano está [aalcuadrado-api.postman_collection.json](aalcuadrado-api.postman_collection.json).
 
 ## Actualizar la API
 
@@ -338,6 +287,14 @@ sudo systemctl restart aalcuadrado-api
 ```
 
 Si una versión nueva cambia las tablas, trae su script en `database/` y se corre con `sudo mariadb < database/<script>.sql` antes de reiniciar.
+
+**Si tu base es anterior al módulo de productos**, corre esto una vez antes de reiniciar (los tres scripts se pueden repetir sin dañar lo que ya existe; `02` no cambia la contraseña de un usuario que ya existe):
+
+```bash
+sudo mariadb < database/01_crear_base_de_datos.sql      # crea productos y producto_colores
+sed "s/CAMBIA_ESTA_CONTRASENA/no-se-usa/g" database/02_crear_usuario_bd.sql | sudo mariadb   # permisos nuevos
+sudo mariadb < database/03_productos_iniciales.sql      # los 3 productos actuales del front
+```
 
 ## Respaldos
 
@@ -365,7 +322,8 @@ Copia `/var/backups/aalcuadrado` fuera de la Raspberry (otro disco, la nube): si
 | --- | --- |
 | `journalctl` dice `Faltan variables de entorno` | Falta un valor en `.env`, o el servicio no corre en la carpeta del proyecto. |
 | `Access denied for user 'aalcuadrado_api'` | `DB_PASSWORD` no coincide con la del paso 6. Cámbiala con `ALTER USER` (ver el final de `database/02_crear_usuario_bd.sql`). |
-| `command denied ... for table` | Se agregó una tabla nueva sin darle permisos al usuario de la API. |
+| `command denied ... for table` | Se agregó una tabla nueva sin darle permisos al usuario de la API: vuelve a correr `02_crear_usuario_bd.sql` (paso 6). |
+| `Table 'aalcuadrado.productos' doesn't exist` | La base se creó con una versión anterior: corre `01`, `02` y `03` de `database/` (ver *Actualizar la API*). |
 | `EACCES` al subir fotos | `/var/lib/aalcuadrado/uploads` no es de `aalcuadrado`: repite el `chown` del paso 4. |
 | Error 502 en `api.tudominio.com` | La API no está corriendo: `systemctl status aalcuadrado-api`. |
 | Error 1033 de Cloudflare | `cloudflared` no está corriendo: `systemctl status cloudflared`. |

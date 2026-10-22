@@ -4,13 +4,14 @@ import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { memoryStorage } from 'multer';
 import type { Entorno } from '../config/entorno.js';
+import { Producto, ProductoColor } from '../productos/producto.entity.js';
 import { Imagen } from './imagen.entity.js';
 import { ImagenesController, MAX_ARCHIVOS } from './imagenes.controller.js';
 import { ImagenesService } from './imagenes.service.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Imagen]),
+    TypeOrmModule.forFeature([Imagen, Producto, ProductoColor]),
     // Las fotos llegan a memoria: el servicio revisa sus bytes antes de escribirlas en disco.
     MulterModule.registerAsync({
       inject: [ConfigService],

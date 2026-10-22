@@ -5,7 +5,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module.js';
 import { validarEntorno, type Entorno } from './config/entorno.js';
 import { ImagenesModule } from './imagenes/imagenes.module.js';
+import { ProductosModule } from './productos/productos.module.js';
 import { UsuariosModule } from './usuarios/usuarios.module.js';
+
+/** Módulos con endpoints. Las pruebas e2e los montan sobre otra base de datos. */
+export const MODULOS_DE_NEGOCIO = [
+  UsuariosModule,
+  AuthModule,
+  ImagenesModule,
+  ProductosModule,
+];
 
 @Module({
   imports: [
@@ -33,9 +42,7 @@ import { UsuariosModule } from './usuarios/usuarios.module.js';
         retryAttempts: 5,
       }),
     }),
-    UsuariosModule,
-    AuthModule,
-    ImagenesModule,
+    ...MODULOS_DE_NEGOCIO,
   ],
 })
 export class AppModule {}

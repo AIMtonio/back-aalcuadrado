@@ -5,6 +5,7 @@
   --morado-oscuro: #2c1f78;
   --rosa: #e4007c;
   --peligro: #c4183c;
+  --advertencia: #ff9f1c;
   --tinta: #17142b;
   --lavanda: #5c5878;
   --fondo: #f4f3fa;
@@ -20,6 +21,7 @@
     --morado-oscuro: #a99cf5;
     --rosa: #ff4fa8;
     --peligro: #ff6b86;
+    --advertencia: #ffb54d;
     --tinta: #ece9fb;
     --lavanda: #aaa5c8;
     --fondo: #121022;
@@ -86,7 +88,9 @@ label small {
 }
 
 input,
-select {
+select,
+textarea {
+  width: 100%;
   font: inherit;
   font-weight: 400;
   color: inherit;
@@ -152,7 +156,8 @@ input:user-invalid {
 
 .boton--chico {
   font-size: 0.8125rem;
-  padding: 0.35rem 0.8rem;
+  padding: 0.35rem 0.7rem;
+  white-space: nowrap;
 }
 
 .error {
@@ -275,6 +280,7 @@ input:user-invalid {
   display: grid;
   gap: 1rem;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: end;
 }
 
 .campos__ancho {
@@ -311,7 +317,7 @@ input:user-invalid {
 .rejilla {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -342,26 +348,137 @@ input:user-invalid {
   padding: 0.75rem;
 }
 
-.foto__meta {
+.foto__titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
   font-size: 0.8125rem;
   color: var(--lavanda);
-  overflow-wrap: anywhere;
 }
 
-.foto__meta strong {
+.foto__titulo strong {
   color: var(--tinta);
 }
 
+.muestra {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 0.2rem;
+  border: 1px solid var(--borde);
+}
+
 .foto__alt {
+  margin: 0;
   font-size: 0.875rem;
-  padding: 0.4rem 0.55rem;
+  overflow-wrap: anywhere;
+}
+
+.foto__alt--vacio {
+  font-style: italic;
+  color: var(--lavanda);
+}
+
+.foto__problema {
+  margin: 0;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  color: var(--tinta);
+  background: color-mix(in srgb, var(--advertencia) 18%, transparent);
+}
+
+.foto__problema--grave {
+  color: var(--peligro);
+  background: color-mix(in srgb, var(--peligro) 12%, transparent);
 }
 
 .foto__acciones {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+  margin-top: auto;
+}
+
+.foto__datos {
+  flex: 1;
+}
+
+/* Catálogo del front */
+.catalogo {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--lavanda);
+}
+
+.enlace {
+  font: inherit;
+  font-weight: 600;
+  color: var(--morado);
+  background: none;
+  border: 0;
+  padding: 0 0.25rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* Diálogo de edición */
+.dialogo {
+  width: min(100% - 2rem, 44rem);
+  max-height: calc(100dvh - 2rem);
+  padding: 1.5rem;
+  color: inherit;
+}
+
+.dialogo::backdrop {
+  background: rgb(23 20 43 / 55%);
+}
+
+.dialogo__encabezado {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.dialogo__encabezado .enlace {
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.dialogo__cuerpo {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 11rem) 1fr;
+  align-items: start;
+}
+
+.dialogo__imagen {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+}
+
+.dialogo__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 36rem) {
+  .dialogo__cuerpo {
+    grid-template-columns: 1fr;
+  }
+
+  .dialogo__imagen {
+    max-width: 10rem;
+  }
 }
 
 .aviso {
@@ -390,8 +507,187 @@ input:user-invalid {
   translate: -50% 0;
 }
 
+textarea {
+  resize: vertical;
+}
+
+/* Pestañas */
+.pestanas {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 1rem;
+}
+
+.pestana {
+  font: inherit;
+  font-weight: 600;
+  color: var(--lavanda);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+
+.pestana:hover {
+  color: var(--tinta);
+}
+
+.pestana[aria-current='page'] {
+  color: var(--morado);
+  background: color-mix(in srgb, var(--morado) 12%, transparent);
+}
+
+/* Tarjetas de producto */
+.producto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.producto--agotado {
+  opacity: 0.8;
+}
+
+.producto__cabeza {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.producto__nombre {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.producto__coleccion {
+  font-size: 0.8125rem;
+  color: var(--lavanda);
+}
+
+.producto__colores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+
+.producto__colores li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.producto__descripcion {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.producto__insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.insignia {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: var(--morado);
+  background: color-mix(in srgb, var(--morado) 12%, transparent);
+}
+
+.insignia--alerta {
+  color: var(--peligro);
+  background: color-mix(in srgb, var(--peligro) 12%, transparent);
+}
+
+/* Formulario de producto */
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.casilla input {
+  width: auto;
+  accent-color: var(--morado);
+}
+
+.colores {
+  margin: 1rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.colores legend {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.colores__lista {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.color-fila {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.color-fila input[type='color'] {
+  height: 2.4rem;
+  padding: 0.15rem;
+  cursor: pointer;
+}
+
+.color-fila__id {
+  font-size: 0.75rem;
+  color: var(--lavanda);
+}
+
+#dialogo-producto .campos {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+@media (max-width: 36rem) {
+  .encabezado {
+    flex-wrap: wrap;
+  }
+
+  .pestanas {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .color-fila {
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  }
+
+  .color-fila__id {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
   }
+}
+
+#rejilla-productos {
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
 }

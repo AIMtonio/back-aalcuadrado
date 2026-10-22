@@ -15,7 +15,7 @@ export class Imagen {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id: number;
 
-  @Column({ type: 'enum', enum: CATEGORIAS })
+  @Column({ type: 'simple-enum', enum: CATEGORIAS })
   categoria: Categoria;
 
   /** Nombre del archivo dentro de `UPLOADS_DIR/<categoria>/`. Lo genera la API. */

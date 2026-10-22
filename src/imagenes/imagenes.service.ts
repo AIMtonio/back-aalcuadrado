@@ -18,6 +18,7 @@ import type {
   FiltroImagenesDto,
   SubirImagenesDto,
 } from './dto/datos-imagen.dto.js';
+import { Producto } from '../productos/producto.entity.js';
 import { Imagen } from './imagen.entity.js';
 import { detectarTipoImagen, FORMATOS, nombreSeguro } from './tipo-imagen.js';
 
@@ -39,6 +40,8 @@ export class ImagenesService implements OnModuleInit {
 
   constructor(
     @InjectRepository(Imagen) private readonly repo: Repository<Imagen>,
+    @InjectRepository(Producto)
+    private readonly productos: Repository<Producto>,
     config: ConfigService<Entorno, true>,
   ) {
     this.carpeta = config.get('UPLOADS_DIR', { infer: true });
@@ -87,6 +90,12 @@ export class ImagenesService implements OnModuleInit {
       return { archivo, mime };
     });
 
+    const destino = await this.asignacionValida({
+      categoria: datos.categoria,
+      producto: datos.producto ?? null,
+      color: datos.color ?? null,
+    });
+
     const guardadas: ImagenRespuesta[] = [];
     for (const [i, { archivo, mime }] of revisadas.entries()) {
       const nombre = `${nombreSeguro(archivo.originalname)}-${randomBytes(4).toString('hex')}.${FORMATOS[mime]}`;
@@ -101,8 +110,8 @@ export class ImagenesService implements OnModuleInit {
             mime,
             tamanoBytes: archivo.size,
             alt: datos.alt ?? null,
-            producto: datos.producto ?? null,
-            color: datos.color ?? null,
+            producto: destino.producto,
+            color: destino.color,
             // Si se suben varias juntas, conservan el orden en que se eligieron.
             orden: (datos.orden ?? 0) + i,
           }),
@@ -123,6 +132,7 @@ export class ImagenesService implements OnModuleInit {
     const imagen = await this.buscar(id);
     const categoriaAnterior = imagen.categoria;
     this.repo.merge(imagen, sinIndefinidos({ ...cambios }));
+    Object.assign(imagen, await this.asignacionValida(imagen));
 
     if (imagen.categoria !== categoriaAnterior) {
       // Cambió de categoría: el archivo se mueve a la otra subcarpeta.
@@ -147,6 +157,45 @@ export class ImagenesService implements OnModuleInit {
     const imagen = await this.buscar(id);
     await this.repo.delete({ id });
     await this.borrarArchivo(this.ruta(imagen.categoria, imagen.archivo));
+  }
+
+  /**
+   * Una foto de producto necesita un producto que exista y, si trae color, que sea
+   * uno de los colores de ese producto. En la galería no aplican: se limpian.
+   */
+  private async asignacionValida(
+    datos: Pick<Imagen, 'categoria' | 'producto' | 'color'>,
+  ): Promise<Pick<Imagen, 'categoria' | 'producto' | 'color'>> {
+    if (datos.categoria === 'galeria') {
+      return { categoria: datos.categoria, producto: null, color: null };
+    }
+    if (!datos.producto) {
+      throw new BadRequestException(
+        'Elige el producto: una foto de "productos" sin producto no aparece en el sitio',
+      );
+    }
+    const producto = await this.productos.findOne({
+      where: { slug: datos.producto },
+      relations: { colores: true },
+    });
+    if (!producto) {
+      throw new BadRequestException(
+        `No existe el producto "${datos.producto}". Créalo primero en Productos.`,
+      );
+    }
+    if (
+      datos.color &&
+      !producto.colores.some((c) => c.colorId === datos.color)
+    ) {
+      throw new BadRequestException(
+        `"${producto.nombre}" no tiene el color "${datos.color}"`,
+      );
+    }
+    return {
+      categoria: datos.categoria,
+      producto: datos.producto,
+      color: datos.color ?? null,
+    };
   }
 
   private async buscar(id: number): Promise<Imagen> {

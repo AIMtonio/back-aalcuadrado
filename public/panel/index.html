@@ -30,13 +30,20 @@
     <div id="vista-panel" hidden>
       <header class="encabezado">
         <h1 class="marca">aalcuadrado <span>panel</span></h1>
+        <nav class="pestanas" aria-label="Secciones">
+          <button type="button" class="pestana" data-pestana="fotos" aria-current="page">Fotos</button>
+          <button type="button" class="pestana" data-pestana="productos">Productos</button>
+        </nav>
         <span class="encabezado__usuario" id="nombre-usuario"></span>
         <button type="button" class="boton boton--secundario" id="boton-salir">Salir</button>
       </header>
 
-      <main class="contenido">
+      <main class="contenido" id="pestana-fotos">
         <section class="tarjeta" aria-labelledby="titulo-subir">
-          <h2 id="titulo-subir">Subir fotos</h2>
+          <div class="barra">
+            <h2 id="titulo-subir">Subir fotos</h2>
+            <p class="catalogo" id="estado-catalogo"></p>
+          </div>
           <form id="form-subir" class="subir">
             <label class="zona" id="zona">
               <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
@@ -45,31 +52,7 @@
             </label>
             <ul class="previas" id="previas"></ul>
 
-            <div class="campos">
-              <label>
-                Categoría
-                <select name="categoria" required>
-                  <option value="productos">Productos</option>
-                  <option value="galeria">Galería (ambiente)</option>
-                </select>
-              </label>
-              <label>
-                Producto <small>(slug, opcional)</small>
-                <input name="producto" placeholder="nochebuena" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="100" />
-              </label>
-              <label>
-                Color <small>(id, opcional)</small>
-                <input name="color" placeholder="rojo" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="50" />
-              </label>
-              <label>
-                Orden
-                <input name="orden" type="number" value="0" step="1" />
-              </label>
-              <label class="campos__ancho">
-                Texto alternativo <small>(describe la foto)</small>
-                <input name="alt" maxlength="200" placeholder="Aretes Nochebuena en color rojo" />
-              </label>
-            </div>
+            <div class="campos" data-asignacion></div>
             <p class="error" id="error-subir" role="alert"></p>
             <button type="submit" class="boton" id="boton-subir">Subir</button>
           </form>
@@ -78,12 +61,13 @@
         <section aria-labelledby="titulo-fotos">
           <div class="barra">
             <h2 id="titulo-fotos">Fotos <span id="total" class="contador"></span></h2>
-            <label>
+            <label class="en-linea">
               Mostrar
               <select id="filtro">
                 <option value="">Todas</option>
                 <option value="productos">Productos</option>
                 <option value="galeria">Galería</option>
+                <option value="pendientes">No se ven en el sitio</option>
               </select>
             </label>
           </div>
@@ -91,21 +75,184 @@
           <ul class="rejilla" id="rejilla"></ul>
         </section>
       </main>
+
+      <main class="contenido" id="pestana-productos" hidden>
+        <section aria-labelledby="titulo-productos">
+          <div class="barra">
+            <h2 id="titulo-productos">Productos <span id="total-productos" class="contador"></span></h2>
+            <button type="button" class="boton" id="boton-nuevo-producto">Nuevo producto</button>
+          </div>
+          <p class="vacio" id="vacio-productos" hidden>Todavía no hay productos. Crea el primero.</p>
+          <ul class="rejilla" id="rejilla-productos"></ul>
+        </section>
+      </main>
     </div>
+
+    <!-- Campos de una foto: se usan al subir y al editar -->
+    <template id="plantilla-campos">
+      <label>
+        Categoría
+        <select name="categoria" required>
+          <option value="productos">Producto</option>
+          <option value="galeria">Galería (ambiente)</option>
+        </select>
+      </label>
+      <label data-solo-productos>
+        Producto
+        <select name="producto" required>
+          <option value="">Elige un producto…</option>
+        </select>
+      </label>
+      <label data-solo-productos>
+        <span>Color <small>(opcional)</small></span>
+        <select name="color">
+          <option value="">Sin color en particular</option>
+        </select>
+      </label>
+      <label>
+        <span>Orden <small>(el más bajo es la portada)</small></span>
+        <input name="orden" type="number" value="0" step="1" />
+      </label>
+      <label class="campos__ancho">
+        <span>Texto alternativo <small>(describe la foto para quien no la ve)</small></span>
+        <input
+          name="alt"
+          maxlength="200"
+          pattern="(?!\s*https?://).*"
+          title="Describe la foto con palabras; no pongas una URL"
+        />
+      </label>
+    </template>
 
     <template id="plantilla-foto">
       <li class="foto tarjeta">
         <a class="foto__imagen" target="_blank" rel="noopener"><img loading="lazy" alt="" /></a>
         <div class="foto__datos">
-          <p class="foto__meta"></p>
-          <input class="foto__alt" maxlength="200" aria-label="Texto alternativo" placeholder="Texto alternativo" />
+          <p class="foto__titulo"></p>
+          <p class="foto__alt"></p>
+          <p class="foto__problema" hidden></p>
           <div class="foto__acciones">
+            <button type="button" class="boton boton--chico" data-accion="editar">Editar</button>
             <button type="button" class="boton boton--chico boton--secundario" data-accion="copiar">Copiar URL</button>
             <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Borrar</button>
           </div>
         </div>
       </li>
     </template>
+
+    <template id="plantilla-producto">
+      <li class="producto tarjeta">
+        <div class="producto__cabeza">
+          <h3 class="producto__nombre"></h3>
+          <span class="producto__coleccion"></span>
+        </div>
+        <ul class="producto__colores" aria-label="Colores"></ul>
+        <p class="producto__descripcion"></p>
+        <p class="producto__insignias"></p>
+        <div class="foto__acciones">
+          <button type="button" class="boton boton--chico" data-accion="editar">Editar</button>
+          <button type="button" class="boton boton--chico boton--secundario" data-accion="fotos">Subir fotos</button>
+          <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Borrar</button>
+        </div>
+      </li>
+    </template>
+
+    <template id="plantilla-color">
+      <li class="color-fila">
+        <input type="color" aria-label="Color" data-campo="hex" />
+        <input aria-label="Nombre del color" placeholder="Rosa mexicano" maxlength="50" required data-campo="nombre" />
+        <code class="color-fila__id" title="Id del color: lo guardan las fotos"></code>
+        <button type="button" class="enlace" data-accion="quitar" aria-label="Quitar color">Quitar</button>
+      </li>
+    </template>
+
+    <dialog id="dialogo-producto" class="dialogo tarjeta" aria-labelledby="titulo-producto">
+      <form id="form-producto" novalidate>
+        <div class="dialogo__encabezado">
+          <h2 id="titulo-producto">Nuevo producto</h2>
+          <button type="button" class="enlace" data-cerrar aria-label="Cerrar">✕</button>
+        </div>
+        <div class="campos">
+          <label>
+            Nombre
+            <input name="nombre" required maxlength="100" placeholder="Corazón de talavera" />
+          </label>
+          <label>
+            <span>Slug <small>(enlace en el sitio; no cambia después)</small></span>
+            <input name="slug" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="corazon-de-talavera" />
+          </label>
+          <label>
+            Colección
+            <select name="coleccion" required>
+              <option value="dia-de-muertos">Día de Muertos</option>
+              <option value="mexicanos">Mexicanos</option>
+              <option value="patrios">Patrios</option>
+              <option value="navidad">Navidad</option>
+              <option value="otros">Otros</option>
+            </select>
+          </label>
+          <label>
+            Etiqueta
+            <select name="etiqueta">
+              <option value="">Sin etiqueta</option>
+              <option value="Nuevo">Nuevo</option>
+              <option value="Temporada">Temporada</option>
+              <option value="Más vendido">Más vendido</option>
+            </select>
+          </label>
+          <label class="campos__ancho">
+            <span>Descripción <small id="contador-descripcion">0/240</small></span>
+            <textarea name="descripcion" maxlength="240" rows="2" placeholder="Una frase que se lea en la tarjeta del producto."></textarea>
+          </label>
+          <label>
+            <span>Orden <small>(opcional; el más bajo sale primero)</small></span>
+            <input name="orden" type="number" step="1" />
+          </label>
+          <label>
+            <span>Precio <small>(opcional; hoy el sitio usa el precio general)</small></span>
+            <input name="precio" type="number" min="0.01" step="0.01" />
+          </label>
+          <label class="casilla">
+            <input type="checkbox" name="disponible" checked />
+            Disponible <small>(si no, sale como "Agotado")</small>
+          </label>
+          <label class="casilla">
+            <input type="checkbox" name="destacado" />
+            Destacado <small>(aparece en la portada)</small>
+          </label>
+        </div>
+
+        <fieldset class="colores">
+          <legend>Colores</legend>
+          <ul class="colores__lista" id="lista-colores"></ul>
+          <button type="button" class="boton boton--chico boton--secundario" id="boton-agregar-color">Agregar color</button>
+        </fieldset>
+
+        <p class="error" id="error-producto" role="alert"></p>
+        <div class="dialogo__acciones">
+          <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
+          <button type="submit" class="boton" id="boton-guardar-producto">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dialogo-editar" class="dialogo tarjeta" aria-labelledby="titulo-editar">
+      <form id="form-editar" method="dialog">
+        <div class="dialogo__encabezado">
+          <h2 id="titulo-editar">Editar foto</h2>
+          <button type="button" class="enlace" data-cerrar aria-label="Cerrar">✕</button>
+        </div>
+        <div class="dialogo__cuerpo">
+          <img class="dialogo__imagen" id="imagen-editar" alt="" />
+          <div class="campos" data-asignacion></div>
+        </div>
+        <p class="error" id="error-editar" role="alert"></p>
+        <div class="dialogo__acciones">
+          <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
+          <button type="submit" class="boton" id="boton-guardar">Guardar</button>
+        </div>
+      </form>
+    </dialog>
 
     <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
   </body>

@@ -1,0 +1,570 @@
+{
+  "info": {
+    "name": "aalcuadrado API",
+    "description": "API de aalcuadrado: login con JWT, productos y fotos.\n\n1. Ajusta las variables de la colección (`baseUrl`, `usuario`, `password`).\n2. Ejecuta **Auth → Login**: guarda el token en `token`.\n3. Todas las demás peticiones usan ese token (Bearer, heredado de la colección).\n\nCrea un producto (**Productos → Crear**) antes de subir sus fotos.\n\nDocumentación: docs/integracion-front.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "usuario",
+      "value": "antonio",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "imagenId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoria",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "archivo",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productoSlug",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Única ruta pública de /api. Cambia usuario y contraseña por un JWT y lo guarda en la variable `token`.\n\nMáximo 5 intentos por minuto por IP (429).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{usuario}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 con token', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  const datos = pm.response.json();",
+                  "  pm.expect(datos.token_type).to.eql('Bearer');",
+                  "  pm.collectionVariables.set('token', datos.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin token (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes"
+              ]
+            },
+            "description": "Comprueba que la API está protegida: sin token responde 401.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 sin token', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Yo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/yo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "yo"
+              ]
+            },
+            "description": "Datos del usuario del token. Nunca incluye el hash de la contraseña."
+          }
+        },
+        {
+          "name": "Cambiar contraseña",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/usuarios/yo/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "usuarios",
+                "yo",
+                "password"
+              ]
+            },
+            "description": "Responde 204. La nueva debe tener entre 12 y 72 caracteres y ser distinta a la actual.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passwordActual\": \"{{password}}\",\n  \"passwordNueva\": \"una-contraseña-nueva-larga\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Productos",
+      "item": [
+        {
+          "name": "Listar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/productos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "description": "Todos los productos con sus colores y `totalFotos`."
+          }
+        },
+        {
+          "name": "Crear",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/productos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ]
+            },
+            "description": "`nombre` y `coleccion` obligatorios. Sin `slug`, se arma del nombre. Guarda el slug en la variable `productoSlug`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Corazón de talavera\",\n  \"coleccion\": \"mexicanos\",\n  \"descripcion\": \"El trazo de la talavera poblana en un corazón ligero.\",\n  \"etiqueta\": \"Nuevo\",\n  \"disponible\": true,\n  \"destacado\": false,\n  \"colores\": [\n    {\n      \"nombre\": \"Azul cobalto\",\n      \"hex\": \"#1F3FAE\"\n    },\n    {\n      \"nombre\": \"Amarillo\",\n      \"hex\": \"#F2B705\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('productoSlug', pm.response.json().slug);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/productos/{{productoSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoSlug}}"
+              ]
+            },
+            "description": "Un producto por slug."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/productos/{{productoSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoSlug}}"
+              ]
+            },
+            "description": "Todo menos el slug. `colores` reemplaza la lista completa (manda el `id` de los que quieres conservar).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": false,\n  \"colores\": [\n    {\n      \"id\": \"azul-cobalto\",\n      \"nombre\": \"Azul cobalto\",\n      \"hex\": \"#1F3FAE\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/productos/{{productoSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "{{productoSlug}}"
+              ]
+            },
+            "description": "204. Si el producto tiene fotos responde 409."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Imágenes",
+      "item": [
+        {
+          "name": "Listar todas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes"
+              ]
+            },
+            "description": "Todas las fotos, ordenadas por `orden` y luego por `id`. Cada una trae su `url` pública."
+          }
+        },
+        {
+          "name": "Listar galería",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes?categoria=galeria",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "galeria"
+                }
+              ]
+            },
+            "description": "Solo la sección \"Así se ven\"."
+          }
+        },
+        {
+          "name": "Listar de un producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes?categoria=productos&producto=nochebuena",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "productos"
+                },
+                {
+                  "key": "producto",
+                  "value": "nochebuena"
+                }
+              ]
+            },
+            "description": "Fotos de un producto. `producto` es el slug del JSON del front."
+          }
+        },
+        {
+          "name": "Subir",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes"
+              ]
+            },
+            "description": "`multipart/form-data`. En `archivos` elige de 1 a 10 fotos (JPG, PNG, WebP o AVIF; 10 MB cada una). Guarda en variables el `id`, la categoría y el archivo de la primera.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "archivos",
+                  "type": "file",
+                  "src": [],
+                  "description": "Repite este campo para subir varias"
+                },
+                {
+                  "key": "categoria",
+                  "value": "productos",
+                  "type": "text",
+                  "description": "productos | galeria"
+                },
+                {
+                  "key": "producto",
+                  "value": "nochebuena",
+                  "type": "text",
+                  "description": "Slug de un producto existente (obligatorio si categoria=productos)"
+                },
+                {
+                  "key": "color",
+                  "value": "rojo",
+                  "type": "text",
+                  "description": "Id de un color de ese producto (opcional)"
+                },
+                {
+                  "key": "alt",
+                  "value": "Aretes Nochebuena en color rojo",
+                  "type": "text",
+                  "description": "Texto alternativo (opcional)"
+                },
+                {
+                  "key": "orden",
+                  "value": "0",
+                  "type": "text",
+                  "description": "Entero (opcional)"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "const [primera] = pm.response.json();",
+                  "if (primera) {",
+                  "  pm.collectionVariables.set('imagenId', primera.id);",
+                  "  pm.collectionVariables.set('categoria', primera.categoria);",
+                  "  pm.collectionVariables.set('archivo', primera.archivo);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes/{{imagenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes",
+                "{{imagenId}}"
+              ]
+            },
+            "description": "Una foto por id (404 si no existe)."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes/{{imagenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes",
+                "{{imagenId}}"
+              ]
+            },
+            "description": "Cambia cualquier campo: `alt`, `producto`, `color`, `orden`, `categoria`. `\"\"` o `null` borra el valor. Si cambia `categoria`, el archivo se mueve de carpeta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"alt\": \"Aretes Nochebuena, vista de frente\",\n  \"orden\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/imagenes/{{imagenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "imagenes",
+                "{{imagenId}}"
+              ]
+            },
+            "description": "Borra el registro y el archivo. Responde 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Archivos",
+      "item": [
+        {
+          "name": "Descargar foto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/uploads/{{categoria}}/{{archivo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "uploads",
+                "{{categoria}}",
+                "{{archivo}}"
+              ]
+            },
+            "description": "Archivo público de la foto (sin token). Usa las variables que deja **Subir**.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
