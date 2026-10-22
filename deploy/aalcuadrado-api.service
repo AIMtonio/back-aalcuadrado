@@ -1,0 +1,26 @@
+# Servicio systemd de la API. Copiar a /etc/systemd/system/aalcuadrado-api.service
+[Unit]
+Description=API de aalcuadrado (NestJS)
+After=network-online.target mariadb.service
+Wants=network-online.target
+Requires=mariadb.service
+
+[Service]
+Type=simple
+User=aalcuadrado
+Group=aalcuadrado
+WorkingDirectory=/opt/aalcuadrado/back-aalcuadrado
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node dist/main.js
+Restart=on-failure
+RestartSec=5
+
+# Endurecimiento: la app solo puede escribir en la carpeta de fotos.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/aalcuadrado/uploads
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Panel aalcuadrado</title>
+    <link rel="stylesheet" href="panel.css" />
+    <script type="module" src="panel.js"></script>
+  </head>
+  <body>
+    <!-- Iniciar sesión -->
+    <main id="vista-login" class="login" hidden>
+      <form id="form-login" class="tarjeta login__form">
+        <h1 class="marca">aalcuadrado <span>panel</span></h1>
+        <label>
+          Usuario
+          <input name="usuario" autocomplete="username" required maxlength="50" />
+        </label>
+        <label>
+          Contraseña
+          <input name="password" type="password" autocomplete="current-password" required maxlength="200" />
+        </label>
+        <p class="error" id="error-login" role="alert"></p>
+        <button type="submit" class="boton">Entrar</button>
+      </form>
+    </main>
+
+    <!-- Panel -->
+    <div id="vista-panel" hidden>
+      <header class="encabezado">
+        <h1 class="marca">aalcuadrado <span>panel</span></h1>
+        <span class="encabezado__usuario" id="nombre-usuario"></span>
+        <button type="button" class="boton boton--secundario" id="boton-salir">Salir</button>
+      </header>
+
+      <main class="contenido">
+        <section class="tarjeta" aria-labelledby="titulo-subir">
+          <h2 id="titulo-subir">Subir fotos</h2>
+          <form id="form-subir" class="subir">
+            <label class="zona" id="zona">
+              <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
+              <span class="zona__texto">Arrastra tus fotos aquí o <u>elígelas</u></span>
+              <span class="zona__ayuda">JPG, PNG, WebP o AVIF · hasta 10 por vez</span>
+            </label>
+            <ul class="previas" id="previas"></ul>
+
+            <div class="campos">
+              <label>
+                Categoría
+                <select name="categoria" required>
+                  <option value="productos">Productos</option>
+                  <option value="galeria">Galería (ambiente)</option>
+                </select>
+              </label>
+              <label>
+                Producto <small>(slug, opcional)</small>
+                <input name="producto" placeholder="nochebuena" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="100" />
+              </label>
+              <label>
+                Color <small>(id, opcional)</small>
+                <input name="color" placeholder="rojo" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="50" />
+              </label>
+              <label>
+                Orden
+                <input name="orden" type="number" value="0" step="1" />
+              </label>
+              <label class="campos__ancho">
+                Texto alternativo <small>(describe la foto)</small>
+                <input name="alt" maxlength="200" placeholder="Aretes Nochebuena en color rojo" />
+              </label>
+            </div>
+            <p class="error" id="error-subir" role="alert"></p>
+            <button type="submit" class="boton" id="boton-subir">Subir</button>
+          </form>
+        </section>
+
+        <section aria-labelledby="titulo-fotos">
+          <div class="barra">
+            <h2 id="titulo-fotos">Fotos <span id="total" class="contador"></span></h2>
+            <label>
+              Mostrar
+              <select id="filtro">
+                <option value="">Todas</option>
+                <option value="productos">Productos</option>
+                <option value="galeria">Galería</option>
+              </select>
+            </label>
+          </div>
+          <p class="vacio" id="vacio" hidden>Todavía no hay fotos aquí.</p>
+          <ul class="rejilla" id="rejilla"></ul>
+        </section>
+      </main>
+    </div>
+
+    <template id="plantilla-foto">
+      <li class="foto tarjeta">
+        <a class="foto__imagen" target="_blank" rel="noopener"><img loading="lazy" alt="" /></a>
+        <div class="foto__datos">
+          <p class="foto__meta"></p>
+          <input class="foto__alt" maxlength="200" aria-label="Texto alternativo" placeholder="Texto alternativo" />
+          <div class="foto__acciones">
+            <button type="button" class="boton boton--chico boton--secundario" data-accion="copiar">Copiar URL</button>
+            <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Borrar</button>
+          </div>
+        </div>
+      </li>
+    </template>
+
+    <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+  </body>
+</html>

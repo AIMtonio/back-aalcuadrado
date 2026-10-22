@@ -1,0 +1,397 @@
+/* Panel de aalcuadrado. Colores tomados de los tokens del front. */
+:root {
+  color-scheme: light dark;
+  --morado: #3b2a9b;
+  --morado-oscuro: #2c1f78;
+  --rosa: #e4007c;
+  --peligro: #c4183c;
+  --tinta: #17142b;
+  --lavanda: #5c5878;
+  --fondo: #f4f3fa;
+  --superficie: #ffffff;
+  --borde: #dcd9ea;
+  --radio: 0.875rem;
+  --sombra: 0 1px 2px rgb(23 20 43 / 6%), 0 4px 16px rgb(23 20 43 / 6%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --morado: #8f7ff0;
+    --morado-oscuro: #a99cf5;
+    --rosa: #ff4fa8;
+    --peligro: #ff6b86;
+    --tinta: #ece9fb;
+    --lavanda: #aaa5c8;
+    --fondo: #121022;
+    --superficie: #1c1934;
+    --borde: #34305a;
+    --sombra: none;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 400 1rem/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--tinta);
+  background: var(--fondo);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+h1,
+h2 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+.marca {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--morado);
+}
+
+.marca span {
+  font-weight: 500;
+  color: var(--rosa);
+}
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+label small {
+  font-weight: 400;
+  color: var(--lavanda);
+}
+
+input,
+select {
+  font: inherit;
+  font-weight: 400;
+  color: inherit;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  min-width: 0;
+}
+
+input:focus-visible,
+select:focus-visible,
+.boton:focus-visible,
+.zona:focus-within {
+  outline: 3px solid color-mix(in srgb, var(--morado) 45%, transparent);
+  outline-offset: 2px;
+}
+
+input:user-invalid {
+  border-color: var(--peligro);
+}
+
+.boton {
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: var(--morado);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.65rem 1.4rem;
+  cursor: pointer;
+}
+
+.boton:hover {
+  background: var(--morado-oscuro);
+}
+
+.boton:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.boton--secundario {
+  color: var(--morado);
+  background: transparent;
+  border: 1px solid var(--borde);
+}
+
+.boton--secundario:hover {
+  background: var(--fondo);
+}
+
+.boton--peligro {
+  color: var(--peligro);
+  background: transparent;
+  border: 1px solid var(--borde);
+}
+
+.boton--peligro:hover {
+  color: #fff;
+  background: var(--peligro);
+}
+
+.boton--chico {
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.8rem;
+}
+
+.error {
+  margin: 0;
+  min-height: 1.25em;
+  font-size: 0.875rem;
+  color: var(--peligro);
+}
+
+/* Login */
+.login {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.login__form {
+  width: min(100%, 22rem);
+  display: grid;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+/* Panel */
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem clamp(1rem, 3vw, 2.5rem);
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.encabezado__usuario {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--lavanda);
+}
+
+.contenido {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 4rem;
+  display: grid;
+  gap: 2rem;
+}
+
+.contenido > .tarjeta {
+  padding: 1.5rem;
+}
+
+.subir {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.zona {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 0.25rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 2px dashed var(--borde);
+  border-radius: var(--radio);
+  cursor: pointer;
+  transition: border-color 160ms, background 160ms;
+}
+
+.zona:hover,
+.zona--encima {
+  border-color: var(--morado);
+  background: color-mix(in srgb, var(--morado) 6%, transparent);
+}
+
+.zona input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.zona__texto {
+  font-size: 1rem;
+}
+
+.zona__texto u {
+  color: var(--morado);
+}
+
+.zona__ayuda {
+  font-weight: 400;
+  color: var(--lavanda);
+}
+
+.previas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.previas:empty {
+  display: none;
+}
+
+.previas img {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid var(--borde);
+}
+
+.campos {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.campos__ancho {
+  grid-column: 1 / -1;
+}
+
+.subir .boton {
+  justify-self: start;
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.barra label {
+  grid-auto-flow: column;
+  align-items: center;
+}
+
+.contador {
+  font-weight: 500;
+  color: var(--lavanda);
+}
+
+.vacio {
+  color: var(--lavanda);
+}
+
+.rejilla {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.foto {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.foto__imagen {
+  display: block;
+  aspect-ratio: 1;
+  background: var(--fondo);
+}
+
+.foto__imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.foto__datos {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.foto__meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--lavanda);
+  overflow-wrap: anywhere;
+}
+
+.foto__meta strong {
+  color: var(--tinta);
+}
+
+.foto__alt {
+  font-size: 0.875rem;
+  padding: 0.4rem 0.55rem;
+}
+
+.foto__acciones {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  translate: -50% 1rem;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.875rem;
+  color: #fff;
+  background: var(--tinta);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms, translate 200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  .aviso {
+    color: var(--fondo);
+  }
+}
+
+.aviso--visible {
+  opacity: 1;
+  translate: -50% 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
