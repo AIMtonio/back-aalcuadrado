@@ -150,6 +150,9 @@ JWT_EXPIRA_SEGUNDOS=28800
 
 UPLOADS_DIR=/var/lib/aalcuadrado/uploads
 UPLOADS_MAX_MB=10
+
+# Opcional: Deploy Hook de Vercel para el botón "Publicar sitio" del panel
+DEPLOY_HOOK_URL=
 ```
 
 - `HOST=127.0.0.1` hace que la API no sea visible en tu red local: solo `cloudflared` llega a ella.
@@ -265,6 +268,8 @@ Todas las rutas de `/api` piden `Authorization: Bearer <token>`, salvo el login.
 | `POST` | `/api/imagenes` | `multipart/form-data`: `archivos` (1 a 10), `categoria` (`productos` o `galeria`) y, opcionales, `producto`, `color`, `alt`, `orden`. |
 | `PATCH` | `/api/imagenes/:id` | Cambia `alt`, `producto`, `color`, `orden` o `categoria` (mueve el archivo de carpeta). |
 | `DELETE` | `/api/imagenes/:id` | Borra el registro y el archivo. |
+| `GET` | `/api/publicacion` | Si el botón "Publicar sitio" está configurado y cuándo se usó por última vez. |
+| `POST` | `/api/publicacion` | Llama al Deploy Hook del front (`DEPLOY_HOOK_URL`) para volver a publicar el sitio. |
 | `GET` | `/uploads/<categoria>/<archivo>` | El archivo de la foto. Público, para que `<img src>` funcione. |
 | `GET` | `/panel/` | El panel, con dos pestañas: **Fotos** (subir, editar, borrar) y **Productos** (crear, editar, borrar). La página es pública, pero todo lo que hace pide el token. |
 

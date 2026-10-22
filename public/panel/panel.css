@@ -511,6 +511,23 @@ textarea {
   resize: vertical;
 }
 
+/* Publicar el sitio */
+.publicar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+}
+
+.publicar__estado {
+  font-size: 0.8125rem;
+  color: var(--lavanda);
+}
+
+.publicar + .encabezado__usuario {
+  margin-left: 0;
+}
+
 /* Pestañas */
 .pestanas {
   display: flex;
@@ -665,6 +682,10 @@ textarea {
 @media (max-width: 36rem) {
   .encabezado {
     flex-wrap: wrap;
+  }
+
+  .publicar__estado {
+    display: none;
   }
 
   .pestanas {

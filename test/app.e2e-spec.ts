@@ -1,4 +1,6 @@
 import { existsSync } from 'node:fs';
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ConfigModule } from '@nestjs/config';
@@ -26,10 +28,22 @@ describe('API (e2e)', () => {
   let carpeta: string;
   let db: DataSource;
   let token: string;
+  // Imita el Deploy Hook de Vercel: cuenta los POST y responde con `estadoHook`.
+  let hook: Server;
+  let llamadasHook = 0;
+  let estadoHook = 201;
 
   beforeAll(async () => {
     // El entorno (con una carpeta temporal para las fotos) lo pone test/entorno-e2e.ts.
     carpeta = process.env.UPLOADS_DIR!;
+
+    hook = createServer((req, res) => {
+      if (req.method === 'POST') llamadasHook++;
+      res.writeHead(estadoHook, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ job: { id: 'dpl_prueba', state: 'PENDING' } }));
+    });
+    await new Promise<void>((listo) => hook.listen(0, '127.0.0.1', listo));
+    process.env.DEPLOY_HOOK_URL = `http://127.0.0.1:${(hook.address() as AddressInfo).port}/hook`;
 
     // Los mismos módulos que AppModule, pero sobre SQLite en memoria en lugar de MySQL.
     const modulo = await Test.createTestingModule({
@@ -69,6 +83,7 @@ describe('API (e2e)', () => {
 
   afterAll(async () => {
     await app?.close();
+    hook?.close();
     await rm(carpeta, { recursive: true, force: true });
   });
 
@@ -402,6 +417,38 @@ describe('API (e2e)', () => {
       .get('/api/productos/corazon-de-talavera')
       .set(auth)
       .expect(404);
+  });
+
+  it('publica el sitio llamando al Deploy Hook', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    await request(http).post('/api/publicacion').expect(401);
+
+    const antes = await request(http)
+      .get('/api/publicacion')
+      .set(auth)
+      .expect(200);
+    expect(antes.body).toEqual({ configurada: true, ultima: null });
+
+    const res = await request(http)
+      .post('/api/publicacion')
+      .set(auth)
+      .expect(202);
+    expect(res.body).toMatchObject({ build: 'dpl_prueba' });
+    expect(llamadasHook).toBe(1);
+
+    const despues = await request(http)
+      .get('/api/publicacion')
+      .set(auth)
+      .expect(200);
+    expect(despues.body.ultima).toEqual(res.body);
+
+    // Si el proveedor falla, la API responde 502 con un mensaje claro.
+    estadoHook = 404;
+    const falla = await request(http)
+      .post('/api/publicacion')
+      .set(auth)
+      .expect(502);
+    expect(falla.body.message).toMatch(/respondió 404/);
   });
 
   it('sirve el panel', async () => {

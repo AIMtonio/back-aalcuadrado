@@ -33,10 +33,15 @@ describe('validarEntorno', () => {
   it('DEPLOY_HOOK_URL es opcional, pero si viene debe ser una URL', () => {
     expect(validarEntorno(minimo).DEPLOY_HOOK_URL).toBeNull();
     expect(
-      validarEntorno({ ...minimo, DEPLOY_HOOK_URL: 'https://api.vercel.com/v1/integrations/deploy/prj_x/y' })
-        .DEPLOY_HOOK_URL,
+      validarEntorno({
+        ...minimo,
+        DEPLOY_HOOK_URL:
+          'https://api.vercel.com/v1/integrations/deploy/prj_x/y',
+      }).DEPLOY_HOOK_URL,
     ).toBe('https://api.vercel.com/v1/integrations/deploy/prj_x/y');
-    expect(() => validarEntorno({ ...minimo, DEPLOY_HOOK_URL: 'no-es-url' })).toThrow(/DEPLOY_HOOK_URL/);
+    expect(() =>
+      validarEntorno({ ...minimo, DEPLOY_HOOK_URL: 'no-es-url' }),
+    ).toThrow(/DEPLOY_HOOK_URL/);
   });
 
   it('dice qué variables faltan', () => {

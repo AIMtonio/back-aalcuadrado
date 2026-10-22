@@ -197,7 +197,9 @@ Siempre con esta forma. `message` es un texto o, en errores de validación, una 
 | `src/domain/catalogo.ts` | `ProductoApiSchema`, `FotoApiSchema` y `CatalogoApiJsonSchema` validan `catalogo-api.json`. |
 | `src/data/CatalogoArchivosLocales.ts` | Si existe `catalogo-api.json`, arma los productos con él. Las fotos de cada producto son las de la API; si no tiene, usa las de su JSON del repositorio (mismo slug). Avisa al compilar si una foto no tiene producto, si su producto no existe o si su color no es del producto. |
 | `.gitignore` | Ignora `src/content/fotos/api/` y `src/content/catalogo-api.json`. |
-| `.github/workflows/desplegar.yml` | Paso "Descargar productos y fotos de la API" antes de compilar, con los secrets `API_URL`, `API_USUARIO` y `API_PASSWORD`. Si la API no responde, falla y no publica nada. |
+| `package.json` | `prebuild` corre `api:sincronizar` antes de cada `npm run build` (en Vercel, en GitHub Actions y en local). |
+| `astro.config.mjs` | En Vercel, si no hay `SITE_URL`, usa `VERCEL_PROJECT_PRODUCTION_URL`. |
+| `.github/workflows/desplegar.yml` | Pasa los secrets `API_URL`, `API_USUARIO` y `API_PASSWORD` al paso de compilar. Si la API no responde, el build falla y no se publica nada. |
 
 ### Secrets en GitHub
 
@@ -211,10 +213,23 @@ En el repositorio del front: *Settings → Secrets and variables → Actions →
 
 ## Publicar después de cambiar productos o fotos
 
-El sitio se compila con lo que hay en ese momento. Después de cambiar algo en el panel:
+El sitio se compila con lo que hay en ese momento: cada cambio en el panel necesita una compilación nueva. El sincronizador no se corre a mano: `npm run build` lo ejecuta solo (script `prebuild` del front).
 
-- En GitHub: *Actions → Publicar en GitHub Pages → Run workflow*, o
-- Desde la terminal: `gh workflow run desplegar.yml -R AIMtonio/front-aalcuadrado`
+**Con Vercel**
+
+1. En el proyecto de Vercel, *Settings → Environment Variables*: `API_URL`, `API_USUARIO` y `API_PASSWORD`. `SITE_URL` es opcional: si no está, se usa el dominio de producción de Vercel.
+2. *Settings → Git → Deploy Hooks*: crea uno para la rama `main` y copia la URL.
+3. Pon esa URL en `DEPLOY_HOOK_URL` del `.env` de la API (o de `.env.docker`) y reinicia la API.
+4. En el panel aparece **Publicar sitio**: después de tus cambios, un clic y el sitio se actualiza en 1 a 2 minutos.
+
+La API llama al hook desde el servidor: la URL nunca llega al navegador.
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| `GET` | `/api/publicacion` | `{ configurada, ultima }`. `ultima` es `{ solicitadaEn, build }` o `null` (se pierde al reiniciar la API). |
+| `POST` | `/api/publicacion` | `202` `{ solicitadaEn, build }` · `503` sin `DEPLOY_HOOK_URL` · `502` si el proveedor falla · `429` más de 3 por minuto |
+
+**Con GitHub Pages:** *Actions → Publicar en GitHub Pages → Run workflow*, o `gh workflow run desplegar.yml -R AIMtonio/front-aalcuadrado`.
 
 ## Desarrollo local
 
@@ -227,6 +242,6 @@ El sitio se compila con lo que hay en ese momento. Después de cambiar algo en e
    API_PASSWORD=tu-contraseña
    ```
 
-3. `npm run api:sincronizar && npm run dev`
+3. `npm run api:sincronizar && npm run dev` (en `npm run dev` no corre solo; en `npm run build`, sí)
 
 Vuelve a correr `npm run api:sincronizar` y **reinicia** `npm run dev` cuando cambies algo en el panel. Sin `.env`, el front funciona como siempre, con los productos y fotos del repositorio.

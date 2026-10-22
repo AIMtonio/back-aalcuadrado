@@ -540,6 +540,47 @@
       ]
     },
     {
+      "name": "Publicación",
+      "item": [
+        {
+          "name": "Estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/publicacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "publicacion"
+              ]
+            },
+            "description": "`configurada`: si la API tiene DEPLOY_HOOK_URL. `ultima`: la última publicación pedida desde que arrancó."
+          }
+        },
+        {
+          "name": "Publicar sitio",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/publicacion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "publicacion"
+              ]
+            },
+            "description": "Llama al Deploy Hook del front (Vercel): vuelve a compilar el sitio con los productos y fotos actuales. 202. Máximo 3 por minuto."
+          }
+        }
+      ]
+    },
+    {
       "name": "Archivos",
       "item": [
         {

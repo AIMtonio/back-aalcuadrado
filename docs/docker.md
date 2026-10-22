@@ -66,6 +66,10 @@ Prueba: abre `http://localhost:3000/panel/` en la misma máquina (o con un túne
 
 **Opción B: cloudflared instalado en la máquina.** Sigue los pasos 10 a 12 de [despliegue-raspberry.md](despliegue-raspberry.md). Como la API publica `127.0.0.1:3000`, la configuración de `deploy/cloudflared-config.yml` sirve tal cual.
 
+## Botón "Publicar sitio"
+
+Pon el Deploy Hook de Vercel en `DEPLOY_HOOK_URL` de `.env.docker` y aplica con `docker compose up -d`. Ver [integracion-front.md](integracion-front.md#publicar-después-de-cambiar-productos-o-fotos).
+
 ## Actualizar
 
 ```bash

@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { validarEntorno, type Entorno } from './config/entorno.js';
 import { ImagenesModule } from './imagenes/imagenes.module.js';
 import { ProductosModule } from './productos/productos.module.js';
+import { PublicacionModule } from './publicacion/publicacion.module.js';
 import { UsuariosModule } from './usuarios/usuarios.module.js';
 
 /** Módulos con endpoints. Las pruebas e2e los montan sobre otra base de datos. */
@@ -14,6 +15,7 @@ export const MODULOS_DE_NEGOCIO = [
   AuthModule,
   ImagenesModule,
   ProductosModule,
+  PublicacionModule,
 ];
 
 @Module({

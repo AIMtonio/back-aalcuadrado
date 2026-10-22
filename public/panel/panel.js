@@ -105,6 +105,7 @@ async function entrarAlPanel() {
   cambiarPestana(leer(CLAVE_PESTANA) ?? 'fotos');
   await cargarCatalogo();
   await cargarFotos();
+  await cargarPublicacion();
 }
 
 formLogin.addEventListener('submit', async (evento) => {
@@ -147,6 +148,64 @@ function cambiarPestana(nombre) {
 for (const boton of document.querySelectorAll('[data-pestana]')) {
   boton.addEventListener('click', () => cambiarPestana(boton.dataset.pestana));
 }
+
+/* ---------- Publicar el sitio ---------- */
+
+let ultimaPublicacion = null;
+
+function haceCuanto(fechaIso) {
+  const minutos = Math.round((Date.now() - new Date(fechaIso).getTime()) / 60_000);
+  if (minutos < 1) return 'hace un momento';
+  if (minutos < 60) return `hace ${minutos} min`;
+  const horas = Math.round(minutos / 60);
+  return horas < 24 ? `hace ${horas} h` : new Date(fechaIso).toLocaleString('es-MX');
+}
+
+function pintarPublicacion() {
+  $('#estado-publicacion').textContent = ultimaPublicacion
+    ? `Publicado ${haceCuanto(ultimaPublicacion.solicitadaEn)}`
+    : '';
+}
+
+/** Muestra el botón solo si la API tiene DEPLOY_HOOK_URL. */
+async function cargarPublicacion() {
+  try {
+    const estado = await api('/publicacion');
+    $('#publicar').hidden = !estado.configurada;
+    ultimaPublicacion = estado.ultima;
+    pintarPublicacion();
+  } catch {
+    $('#publicar').hidden = true;
+  }
+}
+
+$('#boton-publicar').addEventListener('click', async () => {
+  if (
+    !window.confirm(
+      'Se volverá a compilar el sitio con los productos y fotos que hay ahora en el panel. ¿Publicar?',
+    )
+  ) {
+    return;
+  }
+  const boton = $('#boton-publicar');
+  boton.disabled = true;
+  boton.textContent = 'Publicando…';
+  try {
+    ultimaPublicacion = await api('/publicacion', { method: 'POST' });
+    pintarPublicacion();
+    avisar('Publicando: el sitio se actualiza en 1 a 2 minutos');
+  } catch (e) {
+    avisar(e.estado === 429 ? 'Espera un minuto antes de volver a publicar.' : e.message);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = 'Publicar sitio';
+  }
+});
+
+// Mantiene al día el "hace X min".
+setInterval(() => {
+  if (!$('#publicar').hidden) pintarPublicacion();
+}, 60_000);
 
 /* ---------- Avisos ---------- */
 
