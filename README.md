@@ -20,7 +20,8 @@ src/
   cli/         npm run usuario:crear
 public/panel/  panel (HTML + CSS + JS, sin dependencias)
 database/      scripts SQL: base, tablas, usuario y permisos
-deploy/        servicio systemd y configuración de cloudflared
+deploy/        servicio systemd y configuración de cloudflared (sin Docker)
+docker/        script de inicio de MariaDB para Docker
 docs/          guía de despliegue en Raspberry Pi
 ```
 
@@ -62,6 +63,7 @@ Las tablas las crean los scripts de `database/`, no la API (`synchronize: false`
 
 ## Despliegue
 
-- [docs/despliegue-raspberry.md](docs/despliegue-raspberry.md): Raspberry Pi, MariaDB, systemd y Cloudflare Tunnel.
+- [docs/docker.md](docs/docker.md): con Docker Compose (API, MariaDB y Cloudflare Tunnel).
+- [docs/despliegue-raspberry.md](docs/despliegue-raspberry.md): sin Docker (Raspberry Pi, MariaDB, systemd y Cloudflare Tunnel).
 - [docs/integracion-front.md](docs/integracion-front.md): contrato de la API y cambios para el front.
 - [docs/aalcuadrado-api.postman_collection.json](docs/aalcuadrado-api.postman_collection.json): colección para Postman, Insomnia o Bruno.

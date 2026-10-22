@@ -13,8 +13,8 @@ export function configurarApp(app: NestExpressApplication): void {
   const config = app.get<ConfigService<Entorno, true>>(ConfigService);
   const produccion = config.get('NODE_ENV', { infer: true }) === 'production';
 
-  // cloudflared se conecta desde la misma máquina: confiamos en su X-Forwarded-For para saber la IP real.
-  app.set('trust proxy', 'loopback');
+  // cloudflared va delante de la API: se confía en su X-Forwarded-For para saber la IP real.
+  app.set('trust proxy', config.get('TRUST_PROXY', { infer: true }));
   app.disable('x-powered-by');
 
   app.use(

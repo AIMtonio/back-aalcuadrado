@@ -1,5 +1,7 @@
 # Levantar la API en una Raspberry Pi y exponerla con Cloudflare Tunnel
 
+> ¿Prefieres Docker? Sigue [docker.md](docker.md): levanta la API, la base de datos y el túnel con `docker compose`.
+
 Esta guía deja la API corriendo en la Raspberry como servicio, con MariaDB (compatible con MySQL), las fotos en una carpeta fija y un túnel de Cloudflare que la publica en tu dominio (por ejemplo `https://api.tudominio.com`) **sin abrir puertos en tu router**.
 
 ```

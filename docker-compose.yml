@@ -1,0 +1,69 @@
+# API de aalcuadrado con su base de datos y, opcionalmente, el túnel de Cloudflare.
+#
+#   cp .env.docker.example .env.docker   # y llena los valores
+#   docker compose up -d --build                    # API + base de datos
+#   docker compose --profile tunel up -d --build    # además, el túnel de Cloudflare
+#
+# Guía completa: docs/docker.md
+
+name: aalcuadrado
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    env_file: .env.docker
+    environment:
+      MARIADB_AUTO_UPGRADE: "1"
+    volumes:
+      - datos-db:/var/lib/mysql
+      # Solo corren la primera vez (con el volumen vacío), en este orden.
+      - ./database/01_crear_base_de_datos.sql:/docker-entrypoint-initdb.d/01_crear_base_de_datos.sql:ro
+      - ./docker/mariadb/02_usuario_api.sh:/docker-entrypoint-initdb.d/02_usuario_api.sh:ro
+      - ./database/03_productos_iniciales.sql:/docker-entrypoint-initdb.d/03_productos_iniciales.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    # Sin `ports`: la base solo es accesible desde la red interna de Docker.
+
+  api:
+    build: .
+    image: aalcuadrado-api
+    restart: unless-stopped
+    init: true
+    env_file: .env.docker
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: aalcuadrado
+      UPLOADS_DIR: /app/uploads
+      # cloudflared (en otro contenedor o en la máquina) llega desde una IP privada.
+      TRUST_PROXY: loopback, uniquelocal
+    volumes:
+      - fotos:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    # Solo en la propia máquina: para probar con curl o para un cloudflared instalado fuera de Docker.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  tunel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    env_file: .env.docker
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  datos-db:
+  fotos:

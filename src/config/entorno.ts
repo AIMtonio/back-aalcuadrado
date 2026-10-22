@@ -6,6 +6,12 @@ export interface Entorno {
   NODE_ENV: 'development' | 'production' | 'test';
   HOST: string;
   PORT: number;
+  /**
+   * Proxies de los que se acepta X-Forwarded-For (para saber la IP real del visitante).
+   * Por defecto `loopback` (cloudflared en la misma máquina). En Docker, `loopback, uniquelocal`.
+   * Puede ser un número de saltos.
+   */
+  TRUST_PROXY: string | number;
   /** URL pública de la API (la del túnel), sin `/` al final. Se usa para armar la URL de cada foto. */
   PUBLIC_URL: string;
   /** Orígenes que pueden llamar a la API desde un navegador, separados por comas. */
@@ -24,6 +30,11 @@ export interface Entorno {
   UPLOADS_DIR: string;
   /** Tamaño máximo por foto, en megabytes. */
   UPLOADS_MAX_MB: number;
+  /**
+   * Deploy Hook del front (Vercel, Netlify…): una URL secreta que, con un POST,
+   * vuelve a compilar y publicar el sitio. Opcional: sin ella no hay botón "Publicar sitio".
+   */
+  DEPLOY_HOOK_URL: string | null;
 }
 
 const REQUERIDAS = [
@@ -41,6 +52,24 @@ function entero(valor: unknown, nombre: string, porDefecto: number): number {
   if (!Number.isInteger(n) || n <= 0)
     throw new Error(`${nombre} debe ser un entero positivo`);
   return n;
+}
+
+function urlOpcional(valor: unknown, nombre: string): string | null {
+  const texto = String(valor ?? '').trim();
+  if (!texto) return null;
+  try {
+    const url = new URL(texto);
+    if (url.protocol === 'https:' || url.protocol === 'http:') return url.href;
+  } catch {
+    // Se informa abajo.
+  }
+  throw new Error(`${nombre} debe ser una URL http(s)`);
+}
+
+function confianzaProxy(valor: unknown): string | number {
+  const texto = String(valor ?? '').trim();
+  if (!texto) return 'loopback';
+  return /^\d+$/.test(texto) ? Number(texto) : texto;
 }
 
 export function validarEntorno(crudo: Record<string, unknown>): Entorno {
@@ -61,6 +90,7 @@ export function validarEntorno(crudo: Record<string, unknown>): Entorno {
     NODE_ENV: nodeEnv as Entorno['NODE_ENV'],
     HOST: String(crudo.HOST ?? '127.0.0.1'),
     PORT: entero(crudo.PORT, 'PORT', 3000),
+    TRUST_PROXY: confianzaProxy(crudo.TRUST_PROXY),
     PUBLIC_URL: String(crudo.PUBLIC_URL).replace(/\/+$/, ''),
     CORS_ORIGINS: String(crudo.CORS_ORIGINS ?? '')
       .split(',')
@@ -79,5 +109,6 @@ export function validarEntorno(crudo: Record<string, unknown>): Entorno {
     ),
     UPLOADS_DIR: String(crudo.UPLOADS_DIR),
     UPLOADS_MAX_MB: entero(crudo.UPLOADS_MAX_MB, 'UPLOADS_MAX_MB', 10),
+    DEPLOY_HOOK_URL: urlOpcional(crudo.DEPLOY_HOOK_URL, 'DEPLOY_HOOK_URL'),
   };
 }

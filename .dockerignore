@@ -1,0 +1,20 @@
+# Solo entra a la imagen lo que copia el Dockerfile; esto evita mandar lo demás al contexto.
+node_modules
+dist
+uploads
+coverage
+test
+docs
+deploy
+*.tsbuildinfo
+.git
+.github
+.vscode
+.idea
+.DS_Store
+
+# Secretos: nunca dentro de la imagen.
+.env
+.env.*
+!.env.example
+!.env.docker.example
