@@ -581,6 +581,65 @@
       ]
     },
     {
+      "name": "Diseños con IA",
+      "description": "Públicos (sin token): los llama el sitio. Generan con OpenAI la imagen de unos aretes a partir de una idea.",
+      "auth": {
+        "type": "noauth"
+      },
+      "item": [
+        {
+          "name": "Estado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/disenos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disenos"
+              ]
+            },
+            "description": "`disponible`: si hay OPENAI_API_KEY y queda cupo. `restantesHoy`: imágenes que quedan hoy."
+          }
+        },
+        {
+          "name": "Generar diseño",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"texto\": \"Calaveritas de azúcar con flores de cempasúchil, en morado y naranja\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/disenos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "disenos"
+              ]
+            },
+            "description": "200 `{ imagen, restantesHoy }`; `imagen` es `data:image/webp;base64,…`. Tarda de 20 a 60 s. Máximo 3 por IP cada 10 minutos."
+          }
+        }
+      ]
+    },
+    {
       "name": "Archivos",
       "item": [
         {

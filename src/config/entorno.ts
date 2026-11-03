@@ -35,7 +35,24 @@ export interface Entorno {
    * vuelve a compilar y publicar el sitio. Opcional: sin ella no hay botón "Publicar sitio".
    */
   DEPLOY_HOOK_URL: string | null;
+
+  /**
+   * Llave de la API de OpenAI (platform.openai.com → API keys). Opcional: sin ella,
+   * `POST /api/disenos` responde 503. Es secreta: solo va en el .env del servidor.
+   */
+  OPENAI_API_KEY: string | null;
+  /** Modelo de imágenes de OpenAI. */
+  OPENAI_MODELO_IMAGEN: string;
+  /** Calidad de la imagen: a más calidad, más tarda y más cuesta. */
+  OPENAI_CALIDAD_IMAGEN: CalidadImagen;
+  /** Tope de imágenes generadas al día (entre todos los visitantes), para que nadie agote el saldo. */
+  OPENAI_MAX_IMAGENES_DIA: number;
+  /** Base de la API de OpenAI. Solo se cambia en pruebas. */
+  OPENAI_BASE_URL: string;
 }
+
+export const CALIDADES_IMAGEN = ['low', 'medium', 'high'] as const;
+export type CalidadImagen = (typeof CALIDADES_IMAGEN)[number];
 
 const REQUERIDAS = [
   'DB_USER',
@@ -64,6 +81,16 @@ function urlOpcional(valor: unknown, nombre: string): string | null {
     // Se informa abajo.
   }
   throw new Error(`${nombre} debe ser una URL http(s)`);
+}
+
+function calidadImagen(valor: unknown): CalidadImagen {
+  const texto = String(valor ?? '').trim() || 'medium';
+  if (!(CALIDADES_IMAGEN as readonly string[]).includes(texto)) {
+    throw new Error(
+      `OPENAI_CALIDAD_IMAGEN debe ser ${CALIDADES_IMAGEN.join(', ')}`,
+    );
+  }
+  return texto as CalidadImagen;
 }
 
 function confianzaProxy(valor: unknown): string | number {
@@ -110,5 +137,18 @@ export function validarEntorno(crudo: Record<string, unknown>): Entorno {
     UPLOADS_DIR: String(crudo.UPLOADS_DIR),
     UPLOADS_MAX_MB: entero(crudo.UPLOADS_MAX_MB, 'UPLOADS_MAX_MB', 10),
     DEPLOY_HOOK_URL: urlOpcional(crudo.DEPLOY_HOOK_URL, 'DEPLOY_HOOK_URL'),
+    OPENAI_API_KEY: String(crudo.OPENAI_API_KEY ?? '').trim() || null,
+    OPENAI_MODELO_IMAGEN:
+      String(crudo.OPENAI_MODELO_IMAGEN ?? '').trim() || 'gpt-image-2',
+    OPENAI_CALIDAD_IMAGEN: calidadImagen(crudo.OPENAI_CALIDAD_IMAGEN),
+    OPENAI_MAX_IMAGENES_DIA: entero(
+      crudo.OPENAI_MAX_IMAGENES_DIA,
+      'OPENAI_MAX_IMAGENES_DIA',
+      50,
+    ),
+    OPENAI_BASE_URL: (
+      urlOpcional(crudo.OPENAI_BASE_URL, 'OPENAI_BASE_URL') ??
+      'https://api.openai.com/v1'
+    ).replace(/\/+$/, ''),
   };
 }

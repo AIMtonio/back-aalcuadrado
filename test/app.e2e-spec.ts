@@ -32,6 +32,13 @@ describe('API (e2e)', () => {
   let hook: Server;
   let llamadasHook = 0;
   let estadoHook = 201;
+  // Imita la API de imágenes de OpenAI: guarda la última petición y responde con `respuestaOpenAi`.
+  let openAi: Server;
+  let pedidoOpenAi: { auth?: string; cuerpo?: Record<string, unknown> } = {};
+  let respuestaOpenAi: { estado: number; cuerpo: unknown } = {
+    estado: 200,
+    cuerpo: { data: [{ b64_json: 'aW1hZ2Vu' }] },
+  };
 
   beforeAll(async () => {
     // El entorno (con una carpeta temporal para las fotos) lo pone test/entorno-e2e.ts.
@@ -44,6 +51,27 @@ describe('API (e2e)', () => {
     });
     await new Promise<void>((listo) => hook.listen(0, '127.0.0.1', listo));
     process.env.DEPLOY_HOOK_URL = `http://127.0.0.1:${(hook.address() as AddressInfo).port}/hook`;
+
+    openAi = createServer((req, res) => {
+      let datos = '';
+      req.on('data', (parte: Buffer) => (datos += parte.toString()));
+      req.on('end', () => {
+        pedidoOpenAi = {
+          auth: req.headers.authorization,
+          cuerpo: JSON.parse(datos) as Record<string, unknown>,
+        };
+        res.writeHead(respuestaOpenAi.estado, {
+          'Content-Type': 'application/json',
+        });
+        res.end(JSON.stringify(respuestaOpenAi.cuerpo));
+      });
+    });
+    await new Promise<void>((listo) => openAi.listen(0, '127.0.0.1', listo));
+    Object.assign(process.env, {
+      OPENAI_API_KEY: 'sk-prueba',
+      OPENAI_BASE_URL: `http://127.0.0.1:${(openAi.address() as AddressInfo).port}/v1`,
+      OPENAI_MAX_IMAGENES_DIA: '1',
+    });
 
     // Los mismos módulos que AppModule, pero sobre SQLite en memoria en lugar de MySQL.
     const modulo = await Test.createTestingModule({
@@ -84,6 +112,7 @@ describe('API (e2e)', () => {
   afterAll(async () => {
     await app?.close();
     hook?.close();
+    openAi?.close();
     await rm(carpeta, { recursive: true, force: true });
   });
 
@@ -449,6 +478,52 @@ describe('API (e2e)', () => {
       .set(auth)
       .expect(502);
     expect(falla.body.message).toMatch(/respondió 404/);
+  });
+
+  it('genera el diseño de unos aretes con OpenAI, sin token', async () => {
+    const inicio = await request(http).get('/api/disenos').expect(200);
+    expect(inicio.body).toEqual({ disponible: true, restantesHoy: 1 });
+
+    await request(http).post('/api/disenos').send({ texto: ' ' }).expect(400);
+
+    // Si OpenAI rechaza la idea, se explica y no se gasta el cupo.
+    respuestaOpenAi = {
+      estado: 400,
+      cuerpo: { error: { code: 'moderation_blocked', message: 'no' } },
+    };
+    await request(http)
+      .post('/api/disenos')
+      .send({ texto: 'algo que no se puede' })
+      .expect(422);
+
+    respuestaOpenAi = {
+      estado: 200,
+      cuerpo: { data: [{ b64_json: 'aW1hZ2Vu' }] },
+    };
+    const res = await request(http)
+      .post('/api/disenos')
+      .send({ texto: 'Calaveritas con flores "rosas"' })
+      .expect(200);
+    expect(res.body).toEqual({
+      imagen: 'data:image/webp;base64,aW1hZ2Vu',
+      restantesHoy: 0,
+    });
+    expect(pedidoOpenAi.auth).toBe('Bearer sk-prueba');
+    expect(pedidoOpenAi.cuerpo).toMatchObject({
+      model: 'gpt-image-2',
+      quality: 'medium',
+      output_format: 'webp',
+    });
+    const prompt = String(pedidoOpenAi.cuerpo?.prompt);
+    expect(prompt).toMatch(/^Actúa como un diseñador 3D/);
+    expect(prompt).toContain('Fondo gris claro');
+    expect(prompt).toMatch(
+      /Idea del cliente: "Calaveritas con flores 'rosas'"$/,
+    );
+
+    // Se acabó el cupo del día.
+    const fin = await request(http).get('/api/disenos').expect(200);
+    expect(fin.body).toEqual({ disponible: false, restantesHoy: 0 });
   });
 
   it('sirve el panel', async () => {

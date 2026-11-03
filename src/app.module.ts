@@ -4,6 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module.js';
 import { validarEntorno, type Entorno } from './config/entorno.js';
+import { DisenosModule } from './disenos/disenos.module.js';
 import { ImagenesModule } from './imagenes/imagenes.module.js';
 import { ProductosModule } from './productos/productos.module.js';
 import { PublicacionModule } from './publicacion/publicacion.module.js';
@@ -16,6 +17,7 @@ export const MODULOS_DE_NEGOCIO = [
   ImagenesModule,
   ProductosModule,
   PublicacionModule,
+  DisenosModule,
 ];
 
 @Module({

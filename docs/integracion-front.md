@@ -231,6 +231,42 @@ La API llama al hook desde el servidor: la URL nunca llega al navegador.
 
 **Con GitHub Pages:** *Actions → Publicar en GitHub Pages → Run workflow*, o `gh workflow run desplegar.yml -R AIMtonio/front-aalcuadrado`.
 
+## Diseñar aretes con IA
+
+El sitio puede mandar la idea de un visitante y mostrar unos aretes generados por OpenAI. Los dos endpoints son **públicos** (sin token), porque los llama el navegador del visitante; la llave de OpenAI vive solo en la API.
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| `GET` | `/api/disenos` | `{ disponible, restantesHoy }`. Si `disponible` es `false`, oculta el formulario. |
+| `POST` | `/api/disenos` | Cuerpo `{ "texto": "calaveritas con flores rosas" }` (3 a 500 caracteres) → `200` `{ imagen, restantesHoy }` |
+
+`imagen` es un *data URL* (`data:image/webp;base64,…`) que va directo en `<img src>`. Tarda de 20 a 60 segundos: muestra un estado de "generando".
+
+Errores (`message` siempre en español, listo para mostrar):
+
+| Código | Cuándo |
+| --- | --- |
+| `400` | `texto` vacío, muy corto o de más de 500 caracteres |
+| `422` | OpenAI no quiso dibujar esa idea (moderación) |
+| `429` | Más de 3 por IP cada 10 minutos, o se acabó el cupo del día (`OPENAI_MAX_IMAGENES_DIA`) |
+| `502` | OpenAI falló o tardó más de 90 segundos |
+| `503` | No hay `OPENAI_API_KEY`, o la llave no sirve o no tiene saldo |
+
+La API arma el prompt: le pide a la IA actuar como diseñador 3D, un par de aretes impresos en 3D en PLA, foto de producto en fondo gris claro, sin texto ni personas, y al final agrega la idea del visitante. Está en `src/disenos/prompt.ts`.
+
+```ts
+const respuesta = await fetch(`${API_URL}/api/disenos`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ texto }),
+});
+const datos = await respuesta.json();
+if (!respuesta.ok) throw new Error(datos.message);
+imagen.src = datos.imagen;
+```
+
+El dominio del sitio debe estar en `CORS_ORIGINS` de la API.
+
 ## Desarrollo local
 
 1. Levanta la API (`npm run start:dev` en este repositorio).

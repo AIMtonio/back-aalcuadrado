@@ -153,6 +153,11 @@ UPLOADS_MAX_MB=10
 
 # Opcional: Deploy Hook de Vercel para el botón "Publicar sitio" del panel
 DEPLOY_HOOK_URL=
+
+# Opcional: llave de OpenAI para generar diseños de aretes (POST /api/disenos)
+OPENAI_API_KEY=
+OPENAI_CALIDAD_IMAGEN=medium
+OPENAI_MAX_IMAGENES_DIA=50
 ```
 
 - `HOST=127.0.0.1` hace que la API no sea visible en tu red local: solo `cloudflared` llega a ella.
@@ -270,6 +275,8 @@ Todas las rutas de `/api` piden `Authorization: Bearer <token>`, salvo el login.
 | `DELETE` | `/api/imagenes/:id` | Borra el registro y el archivo. |
 | `GET` | `/api/publicacion` | Si el botón "Publicar sitio" está configurado y cuándo se usó por última vez. |
 | `POST` | `/api/publicacion` | Llama al Deploy Hook del front (`DEPLOY_HOOK_URL`) para volver a publicar el sitio. |
+| `GET` | `/api/disenos` | **Pública.** Si la generación con IA está disponible y cuántas imágenes quedan hoy. |
+| `POST` | `/api/disenos` | **Pública.** `{ "texto": "tu idea" }` → imagen de unos aretes generada con OpenAI (`OPENAI_API_KEY`). |
 | `GET` | `/uploads/<categoria>/<archivo>` | El archivo de la foto. Público, para que `<img src>` funcione. |
 | `GET` | `/panel/` | El panel, con dos pestañas: **Fotos** (subir, editar, borrar) y **Productos** (crear, editar, borrar). La página es pública, pero todo lo que hace pide el token. |
 
