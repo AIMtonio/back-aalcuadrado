@@ -22,3 +22,10 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+
+# Fotos subidas en desarrollo
+/uploads
+*.tsbuildinfo
+
+# Variables de Docker
+.env.docker

@@ -1,0 +1,10 @@
+# Configuración del túnel. Copiar a /etc/cloudflared/config.yml
+# y reemplazar <TUNNEL_ID> y el dominio.
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: api.tudominio.com
+    service: http://127.0.0.1:3000
+  # Cualquier otro nombre que llegue al túnel recibe 404.
+  - service: http_status:404
