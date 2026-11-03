@@ -146,4 +146,4 @@ Si MariaDB ya corre en la máquina (instalada como en [despliegue-raspberry.md](
 | `Faltan variables de entorno` en los logs de `api` | Falta `JWT_SECRET`, `DB_PASSWORD` o `PUBLIC_URL` en `.env.docker`. |
 | `port is already allocated` en el 3000 | Ya corre otra API (por ejemplo, la de systemd). Detenla: `sudo systemctl disable --now aalcuadrado-api`. |
 | Cloudflare responde 502 | En *Public Hostname* la URL debe ser `api:3000`, no `localhost:3000`. |
-| Todos los visitantes comparten el límite de 5 logins por minuto | `TRUST_PROXY` no incluye la IP de cloudflared. En Docker ya viene `loopback, uniquelocal`. |
+| Todos los visitantes comparten el límite ("Ya creaste varios diseños seguidos", logins) | La API cuenta por `CF-Connecting-IP` cuando la conexión viene de una red privada. Si aun así pasa, revisa que cloudflared apunte a la API por la red local o de Docker, no por una IP pública. |

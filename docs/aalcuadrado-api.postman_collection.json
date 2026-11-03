@@ -634,7 +634,7 @@
                 "disenos"
               ]
             },
-            "description": "200 `{ imagen, restantesHoy }`; `imagen` es `data:image/webp;base64,…`. Tarda de 20 a 60 s. Máximo 3 por IP cada 10 minutos."
+            "description": "200 `{ imagen, restantesHoy }`; `imagen` es `data:image/webp;base64,…`. Tarda de 20 a 60 s. Máximo OPENAI_MAX_IMAGENES_VISITANTE (5) diseños por visitante por hora; los que fallan no cuentan."
           }
         }
       ]

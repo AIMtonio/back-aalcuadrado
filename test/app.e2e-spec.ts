@@ -70,7 +70,8 @@ describe('API (e2e)', () => {
     Object.assign(process.env, {
       OPENAI_API_KEY: 'sk-prueba',
       OPENAI_BASE_URL: `http://127.0.0.1:${(openAi.address() as AddressInfo).port}/v1`,
-      OPENAI_MAX_IMAGENES_DIA: '1',
+      OPENAI_MAX_IMAGENES_DIA: '3',
+      OPENAI_MAX_IMAGENES_VISITANTE: '1',
     });
 
     // Los mismos módulos que AppModule, pero sobre SQLite en memoria en lugar de MySQL.
@@ -482,7 +483,7 @@ describe('API (e2e)', () => {
 
   it('genera el diseño de unos aretes con OpenAI, sin token', async () => {
     const inicio = await request(http).get('/api/disenos').expect(200);
-    expect(inicio.body).toEqual({ disponible: true, restantesHoy: 1 });
+    expect(inicio.body).toEqual({ disponible: true, restantesHoy: 3 });
 
     await request(http).post('/api/disenos').send({ texto: ' ' }).expect(400);
 
@@ -506,7 +507,7 @@ describe('API (e2e)', () => {
       .expect(200);
     expect(res.body).toEqual({
       imagen: 'data:image/webp;base64,aW1hZ2Vu',
-      restantesHoy: 0,
+      restantesHoy: 2,
     });
     expect(pedidoOpenAi.auth).toBe('Bearer sk-prueba');
     expect(pedidoOpenAi.cuerpo).toMatchObject({
@@ -520,6 +521,29 @@ describe('API (e2e)', () => {
     expect(prompt).toMatch(
       /Idea del cliente: "Calaveritas con flores 'rosas'"$/,
     );
+
+    // Solo cuentan los diseños que salieron bien: el 400 y el 422 no gastaron su cupo,
+    // pero el que salió bien sí (OPENAI_MAX_IMAGENES_VISITANTE=1).
+    const otraVez = await request(http)
+      .post('/api/disenos')
+      .send({ texto: 'otra idea' })
+      .expect(429);
+    expect(otraVez.body.message).toMatch(
+      /^Ya creaste 1 diseño en la última hora/,
+    );
+
+    // Detrás del túnel, cada visitante se distingue por CF-Connecting-IP.
+    for (const [ip, restantes] of [
+      ['203.0.113.1', 1],
+      ['203.0.113.2', 0],
+    ] as const) {
+      const otro = await request(http)
+        .post('/api/disenos')
+        .set('CF-Connecting-IP', ip)
+        .send({ texto: 'flores de cempasúchil' })
+        .expect(200);
+      expect(otro.body.restantesHoy).toBe(restantes);
+    }
 
     // Se acabó el cupo del día.
     const fin = await request(http).get('/api/disenos').expect(200);

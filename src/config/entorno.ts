@@ -47,6 +47,8 @@ export interface Entorno {
   OPENAI_CALIDAD_IMAGEN: CalidadImagen;
   /** Tope de imágenes generadas al día (entre todos los visitantes), para que nadie agote el saldo. */
   OPENAI_MAX_IMAGENES_DIA: number;
+  /** Cuántas imágenes puede crear cada visitante (por IP) en una hora. */
+  OPENAI_MAX_IMAGENES_VISITANTE: number;
   /** Base de la API de OpenAI. Solo se cambia en pruebas. */
   OPENAI_BASE_URL: string;
 }
@@ -145,6 +147,11 @@ export function validarEntorno(crudo: Record<string, unknown>): Entorno {
       crudo.OPENAI_MAX_IMAGENES_DIA,
       'OPENAI_MAX_IMAGENES_DIA',
       50,
+    ),
+    OPENAI_MAX_IMAGENES_VISITANTE: entero(
+      crudo.OPENAI_MAX_IMAGENES_VISITANTE,
+      'OPENAI_MAX_IMAGENES_VISITANTE',
+      5,
     ),
     OPENAI_BASE_URL: (
       urlOpcional(crudo.OPENAI_BASE_URL, 'OPENAI_BASE_URL') ??

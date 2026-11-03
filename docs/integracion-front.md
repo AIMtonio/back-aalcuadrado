@@ -248,7 +248,7 @@ Errores (`message` siempre en español, listo para mostrar):
 | --- | --- |
 | `400` | `texto` vacío, muy corto o de más de 500 caracteres |
 | `422` | OpenAI no quiso dibujar esa idea (moderación) |
-| `429` | Más de 3 por IP cada 10 minutos, o se acabó el cupo del día (`OPENAI_MAX_IMAGENES_DIA`) |
+| `429` | El visitante ya creó `OPENAI_MAX_IMAGENES_VISITANTE` diseños en la última hora (5 por defecto; el mensaje dice en cuántos minutos puede crear otro), se acabó el cupo del día (`OPENAI_MAX_IMAGENES_DIA`), o mandó más de 10 peticiones en un minuto (`ThrottlerException`). Los intentos que fallan no gastan cupo. |
 | `502` | OpenAI falló o tardó más de 90 segundos |
 | `503` | No hay `OPENAI_API_KEY`, o la llave no sirve o no tiene saldo |
 

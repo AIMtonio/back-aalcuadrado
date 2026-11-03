@@ -32,6 +32,9 @@ const TAMANO = '1024x1024';
  */
 const TIEMPO_MAXIMO_MS = 90_000;
 
+/** Ventana del límite por visitante. */
+const VENTANA_VISITANTE_MS = 60 * 60_000;
+
 /** "2026-11-02", con la fecha de la Ciudad de México: el cupo se renueva a medianoche de allá. */
 const hoy = () =>
   new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' });
@@ -44,17 +47,23 @@ export class DisenosService {
   private readonly modelo: string;
   private readonly calidad: CalidadImagen;
   private readonly maximoDiario: number;
+  private readonly maximoPorVisitante: number;
   private readonly baseUrl: string;
 
   // El cupo vive en memoria: se reinicia si la API se reinicia.
   private dia = hoy();
   private usadasHoy = 0;
+  /** Por IP, cuándo se pidió cada diseño de la última hora. Solo cuentan los que salieron bien. */
+  private readonly porVisitante = new Map<string, number[]>();
 
   constructor(config: ConfigService<Entorno, true>) {
     this.llave = config.get('OPENAI_API_KEY', { infer: true });
     this.modelo = config.get('OPENAI_MODELO_IMAGEN', { infer: true });
     this.calidad = config.get('OPENAI_CALIDAD_IMAGEN', { infer: true });
     this.maximoDiario = config.get('OPENAI_MAX_IMAGENES_DIA', { infer: true });
+    this.maximoPorVisitante = config.get('OPENAI_MAX_IMAGENES_VISITANTE', {
+      infer: true,
+    });
     this.baseUrl = config.get('OPENAI_BASE_URL', { infer: true });
   }
 
@@ -66,7 +75,7 @@ export class DisenosService {
     };
   }
 
-  async generar(texto: string): Promise<Diseno> {
+  async generar(texto: string, visitante: string): Promise<Diseno> {
     if (!this.llave) {
       throw new ServiceUnavailableException(
         'La generación de diseños no está disponible por ahora.',
@@ -79,8 +88,24 @@ export class DisenosService {
       );
     }
 
-    // Se aparta el lugar antes de llamar (por si llegan varias a la vez) y se devuelve si falla.
+    const ahora = Date.now();
+    const recientes = this.recientesDe(visitante, ahora);
+    if (recientes.length >= this.maximoPorVisitante) {
+      const minutos = Math.max(
+        1,
+        Math.ceil((recientes[0] + VENTANA_VISITANTE_MS - ahora) / 60_000),
+      );
+      throw new HttpException(
+        `Ya creaste ${this.maximoPorVisitante} ${this.maximoPorVisitante === 1 ? 'diseño' : 'diseños'} en la última hora. Podrás crear otro en ${minutos} min.`,
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    // Se aparta el lugar antes de llamar (por si llegan varias a la vez) y se devuelve si falla:
+    // un error no le gasta el cupo a nadie.
     this.usadasHoy++;
+    recientes.push(ahora);
+    this.porVisitante.set(visitante, recientes);
     try {
       const b64 = await this.pedirImagen(construirPrompt(texto), this.llave);
       return {
@@ -89,8 +114,21 @@ export class DisenosService {
       };
     } catch (error) {
       this.usadasHoy = Math.max(0, this.usadasHoy - 1);
+      const lista = this.porVisitante.get(visitante);
+      const i = lista?.lastIndexOf(ahora) ?? -1;
+      if (lista && i >= 0) lista.splice(i, 1);
       throw error;
     }
+  }
+
+  /** Los diseños del visitante en la última hora, del más viejo al más nuevo. Limpia lo vencido. */
+  private recientesDe(visitante: string, ahora: number): number[] {
+    const desde = ahora - VENTANA_VISITANTE_MS;
+    // De paso se borran los visitantes sin diseños recientes, para que el mapa no crezca.
+    for (const [ip, marcas] of this.porVisitante) {
+      if (!marcas.some((t) => t > desde)) this.porVisitante.delete(ip);
+    }
+    return (this.porVisitante.get(visitante) ?? []).filter((t) => t > desde);
   }
 
   private restantes(): number {

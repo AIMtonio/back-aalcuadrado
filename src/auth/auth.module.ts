@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
-import { ThrottlerGuard } from '@nestjs/throttler';
+import { LimiteGuard } from '../comun/limite.guard.js';
 import type { Entorno } from '../config/entorno.js';
 import { UsuariosModule } from '../usuarios/usuarios.module.js';
 import { AuthController } from './auth.controller.js';
@@ -27,7 +27,7 @@ import { JwtAuthGuard } from './jwt-auth.guard.js';
   providers: [
     AuthService,
     // Los guards globales corren en este orden: primero el límite de peticiones, luego el JWT.
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: LimiteGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })

@@ -158,6 +158,7 @@ DEPLOY_HOOK_URL=
 OPENAI_API_KEY=
 OPENAI_CALIDAD_IMAGEN=medium
 OPENAI_MAX_IMAGENES_DIA=50
+OPENAI_MAX_IMAGENES_VISITANTE=5
 ```
 
 - `HOST=127.0.0.1` hace que la API no sea visible en tu red local: solo `cloudflared` llega a ella.

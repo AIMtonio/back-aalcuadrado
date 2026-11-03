@@ -60,6 +60,7 @@ describe('validarEntorno', () => {
     expect(entorno.OPENAI_MODELO_IMAGEN).toBe('gpt-image-2');
     expect(entorno.OPENAI_CALIDAD_IMAGEN).toBe('medium');
     expect(entorno.OPENAI_MAX_IMAGENES_DIA).toBe(50);
+    expect(entorno.OPENAI_MAX_IMAGENES_VISITANTE).toBe(5);
     expect(entorno.OPENAI_BASE_URL).toBe('https://api.openai.com/v1');
     expect(
       validarEntorno({ ...minimo, OPENAI_API_KEY: ' sk-abc ' }).OPENAI_API_KEY,
