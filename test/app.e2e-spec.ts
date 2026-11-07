@@ -553,5 +553,12 @@ describe('API (e2e)', () => {
   it('sirve el panel', async () => {
     const res = await request(http).get('/panel/').expect(200);
     expect(res.text).toContain('Panel aalcuadrado');
+    // El JS y el CSS van con una huella para que el navegador no use una versión vieja.
+    expect(res.headers['cache-control']).toBe('no-cache');
+    const js = /src="(panel\.js\?v=[0-9a-f]{10})"/.exec(res.text)?.[1];
+    expect(js).toBeDefined();
+    expect(res.text).toMatch(/href="panel\.css\?v=[0-9a-f]{10}"/);
+    await request(http).get(`/panel/${js}`).expect(200);
+    await request(http).get('/panel').expect(301).expect('Location', '/panel/');
   });
 });
