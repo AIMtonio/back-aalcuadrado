@@ -68,6 +68,7 @@ Todos los productos con sus colores, ordenados por nombre.
     "disponible": true,
     "destacado": true,
     "orden": 1,
+    "categoria": { "id": 1, "slug": "arracadas", "nombre": "Arracadas" },
     "colores": [
       { "id": "morado", "nombre": "Morado", "hex": "#3B2A9B" },
       { "id": "rosa-mexicano", "nombre": "Rosa mexicano", "hex": "#E4007C" }
@@ -88,6 +89,7 @@ Todos los productos con sus colores, ordenados por nombre.
 | `precio` | número o `null` | Hoy el sitio lo ignora y usa `sitio.precios.listo`. |
 | `disponible`, `destacado` | booleanos | |
 | `orden` | entero o `null` | |
+| `categoria` | `{ id, slug, nombre }` o `null` (categoría de aretes, ver abajo) | |
 | `colores[].id` | lo que guardan las fotos en `color` | `Color.id` |
 
 ### `POST /api/productos` · `PATCH /api/productos/:slug` · `DELETE /api/productos/:slug`
@@ -101,6 +103,7 @@ Content-Type: application/json
   "coleccion": "mexicanos",
   "descripcion": "El trazo de la talavera poblana en un corazón ligero.",
   "etiqueta": "Nuevo",
+  "categoriaId": 1,
   "colores": [
     { "nombre": "Azul cobalto", "hex": "#1F3FAE" },
     { "nombre": "Amarillo", "hex": "#F2B705" }
@@ -110,12 +113,38 @@ Content-Type: application/json
 
 - Al crear, `nombre` y `coleccion` son obligatorios. Si no mandas `slug`, se arma del nombre (`corazon-de-talavera`); si ya existe, responde `409`.
 - El `id` de cada color se arma de su nombre si no viene (`Azul cobalto` → `azul-cobalto`). Dos colores con el mismo id: `400`.
+- `categoriaId` es el `id` de una categoría de `GET /api/categorias` (opcional). `null` o `""` la quita. Un id que no existe: `400`.
 - `PATCH` acepta los mismos campos menos `slug`, todos opcionales. Si mandas `colores`, la lista **reemplaza** a la anterior. Para conservar un color, manda su `id`. Las fotos de un color que se quita se quedan sin color.
 - `DELETE` responde `409` si el producto tiene fotos: hay que borrarlas o pasarlas a otro producto primero.
 
+### `GET /api/categorias`
+
+Categorías de aretes administradas desde el panel (pestaña Categorías), ordenadas por `orden` y luego por `nombre`.
+
+```json
+[
+  {
+    "id": 1,
+    "slug": "arracadas",
+    "nombre": "Arracadas",
+    "orden": 0,
+    "totalProductos": 3,
+    "creadoEn": "2026-11-07T05:10:00.000Z",
+    "actualizadoEn": "2026-11-07T05:10:00.000Z"
+  }
+]
+```
+
+| Método | Ruta | Cuerpo | Respuesta |
+| --- | --- | --- | --- |
+| `GET` | `/api/categorias/:slug` | — | `200` una categoría · `404` |
+| `POST` | `/api/categorias` | `nombre` obligatorio; opcionales `slug` (se arma del nombre si no viene) y `orden` | `201` · `409` si el slug ya existe |
+| `PATCH` | `/api/categorias/:slug` | `nombre`, `orden` (todo opcional; el slug no cambia) | `200` |
+| `DELETE` | `/api/categorias/:slug` | — | `204` · `409` si tiene productos asignados (quítales la categoría primero) |
+
 ### `GET /api/imagenes`
 
-Filtros opcionales: `categoria` (`productos` o `galeria`) y `producto` (slug). Sale ordenada por `orden` y luego por `id`.
+Filtros opcionales: `categoria` (`productos`, `galeria` o `kits`) y `producto` (slug). Sale ordenada por `orden` y luego por `id`.
 
 ```json
 [
@@ -141,6 +170,7 @@ Filtros opcionales: `categoria` (`productos` o `galeria`) y `producto` (slug). S
 | --- | --- |
 | `categoria: "productos"` | Fotos de un producto. |
 | `categoria: "galeria"` | Sección "Así se ven". |
+| `categoria: "kits"` | Sección "Así quedan" de la página de kits. |
 | `producto` | Slug de un producto que existe en la API. |
 | `color` | `id` de uno de los colores de ese producto, o `null`. |
 | `alt` | Texto alternativo. Si es `null`, el front arma uno ("Aretes Nochebuena, en color rojo"). |
@@ -155,6 +185,7 @@ El archivo de la foto. No pide token y se puede usar desde cualquier dominio. Ca
 | Método | Ruta | Cuerpo | Respuesta |
 | --- | --- | --- | --- |
 | `GET` | `/api/productos/:slug` | — | `200` un producto · `404` |
+| `GET` | `/api/categorias/:slug` | — | `200` una categoría · `404` |
 | `GET` | `/api/imagenes/:id` | — | `200` una imagen · `404` |
 | `POST` | `/api/imagenes` | `multipart/form-data`: `archivos` (1 a 10), `categoria`, y opcionales `producto`, `color`, `alt`, `orden` | `201` lista de imágenes creadas |
 | `PATCH` | `/api/imagenes/:id` | JSON con `alt`, `producto`, `color`, `orden` o `categoria` (`""` o `null` borra el valor) | `200` imagen actualizada |
@@ -266,6 +297,64 @@ imagen.src = datos.imagen;
 ```
 
 El dominio del sitio debe estar en `CORS_ORIGINS` de la API.
+
+## Pedidos de kits (jabón + vela)
+
+El sitio está creciendo de aretes a también vender kits de jabón + vela a la medida. El front manda el pedido con lo que eligió quien visita el sitio; el dueño lo cotiza y lo hace a mano (no hay catálogo, precios ni inventario de este lado). Es **pública** (sin token).
+
+### `POST /api/pedidos`
+
+```http
+POST /api/pedidos
+Content-Type: application/json
+
+{
+  "clienteNombre": "Ana",
+  "clienteContacto": "ana@correo.com",
+  "jabonColor": "Lavanda",
+  "jabonAroma": "Lavanda",
+  "jabonForma": "Corazón",
+  "velaColor": "Blanco",
+  "velaAroma": "Vainilla",
+  "velaTopping": "Flores secas"
+}
+```
+
+`201 Created`: regresa el mismo pedido con `id` y `creadoEn`.
+
+| Campo | Qué es |
+| --- | --- |
+| `clienteNombre` | Nombre de quien pide (para contactarlo). |
+| `clienteContacto` | Correo **o** teléfono. La API acepta cualquiera de los dos formatos (no ambos a la vez). |
+| `jabonColor`, `jabonAroma`, `jabonForma` | Cómo quiere el jabón. |
+| `velaColor`, `velaAroma`, `velaTopping` | Cómo quiere la vela. |
+
+Los ocho campos son obligatorios (texto, hasta 150 caracteres `clienteContacto` y 100/60 el resto). No hay un catálogo fijo de colores, aromas, formas o toppings: el front decide qué opciones mostrar (texto libre, `<select>` con sus propias opciones, etc.) y manda lo elegido tal cual.
+
+| Estado | Cuándo |
+| --- | --- |
+| `400` | Falta algún campo, está vacío, pasa del máximo de caracteres, o `clienteContacto` no es un correo ni un teléfono válido. |
+| `429` | Más de 5 pedidos en un minuto desde la misma IP. |
+
+`GET /api/pedidos` y `DELETE /api/pedidos/:id` existen para el panel (piden token): el dueño los usa para ver los pedidos pendientes y borrarlos cuando ya los cotizó. El front no los necesita.
+
+## Colores, aromas y fotos de kits
+
+Se administran en la pestaña **Kits** del panel y el sitio los toma al compilar, como los productos: `npm run api:sincronizar` los guarda en `catalogo-api.json` (solo los **disponibles**) y descarga las fotos de kits a `src/content/fotos/api/kits/`.
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| `GET` | `/api/kits/colores` | `[{ id, nombre, hex, enJabon, enVela, disponible, orden }]`, por `orden` y nombre |
+| `GET` | `/api/kits/aromas` | `[{ id, nombre, enJabon, enVela, disponible, orden }]` |
+| `GET` | `/api/imagenes?categoria=kits` | Fotos de kits ya hechos, por `orden` (sin producto ni color) |
+
+Piden token (los usa el sincronizador). `POST`, `PATCH /:id` y `DELETE /:id` existen para el panel.
+
+En el front:
+
+- **"Arma tu kit"** ofrece, para cada lista (colores del jabón, aromas de la vela…), las opciones disponibles del panel marcadas para esa pieza. Si una lista queda vacía (o la API no tiene el módulo), usa la de `sitio.kits` y avisa al compilar. Las formas del jabón y los toppings de la vela siguen fijos en `sitio.kits`, porque cada uno tiene su dibujo en la vista previa.
+- **"Así quedan"**, en la página de kits, muestra las fotos de kits en el orden del panel. Sin fotos, la sección no sale.
+- Los pedidos guardan el **nombre** del color y del aroma: renombrar o borrar uno en el panel no cambia los pedidos que ya llegaron.
 
 ## Desarrollo local
 

@@ -18,16 +18,10 @@ import type {
   FiltroImagenesDto,
   SubirImagenesDto,
 } from './dto/datos-imagen.dto.js';
+import { sinIndefinidos } from '../comun/sin-indefinidos.js';
 import { Producto } from '../productos/producto.entity.js';
 import { Imagen } from './imagen.entity.js';
 import { detectarTipoImagen, FORMATOS, nombreSeguro } from './tipo-imagen.js';
-
-/** Quita las llaves con `undefined` (TypeORM 1 no las acepta en un `where` y no deben pisar valores). */
-function sinIndefinidos<T extends object>(objeto: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(objeto).filter(([, v]) => v !== undefined),
-  ) as Partial<T>;
-}
 
 /** Una foto tal como la devuelve la API: la fila más la URL pública del archivo. */
 export type ImagenRespuesta = Imagen & { url: string };
@@ -161,12 +155,12 @@ export class ImagenesService implements OnModuleInit {
 
   /**
    * Una foto de producto necesita un producto que exista y, si trae color, que sea
-   * uno de los colores de ese producto. En la galería no aplican: se limpian.
+   * uno de los colores de ese producto. En la galería y en los kits no aplican: se limpian.
    */
   private async asignacionValida(
     datos: Pick<Imagen, 'categoria' | 'producto' | 'color'>,
   ): Promise<Pick<Imagen, 'categoria' | 'producto' | 'color'>> {
-    if (datos.categoria === 'galeria') {
+    if (datos.categoria !== 'productos') {
       return { categoria: datos.categoria, producto: null, color: null };
     }
     if (!datos.producto) {

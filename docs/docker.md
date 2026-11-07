@@ -89,6 +89,15 @@ docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < da
 
 Los tres se pueden repetir sin dañar lo que ya existe.
 
+**Categorías de aretes, pedidos de kits y colores, aromas y fotos de kits en una base que ya existía antes de este cambio** (`01` ya los trae para un volumen nuevo):
+
+```bash
+docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/04_categorias.sql
+docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/05_pedidos_kits.sql
+docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/06_kits_opciones.sql
+docker compose exec -T db sh -c '/docker-entrypoint-initdb.d/02_usuario_api.sh'
+```
+
 ## Respaldos
 
 ```bash
