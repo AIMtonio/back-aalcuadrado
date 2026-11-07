@@ -21,6 +21,7 @@ services:
       - ./database/01_crear_base_de_datos.sql:/docker-entrypoint-initdb.d/01_crear_base_de_datos.sql:ro
       - ./docker/mariadb/02_usuario_api.sh:/docker-entrypoint-initdb.d/02_usuario_api.sh:ro
       - ./database/03_productos_iniciales.sql:/docker-entrypoint-initdb.d/03_productos_iniciales.sql:ro
+      - ./database/06_kits_opciones.sql:/docker-entrypoint-initdb.d/04_kits_opciones.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s

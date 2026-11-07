@@ -31,6 +31,18 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.productos TO 'aalcuadrado_ap
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.producto_colores TO 'aalcuadrado_api'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.producto_colores TO 'aalcuadrado_api'@'127.0.0.1';
 
+-- categorias: lectura y escritura completas (panel de categorías de aretes).
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.categorias TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.categorias TO 'aalcuadrado_api'@'127.0.0.1';
+
+-- pedidos_kits: el front inserta pedidos; el panel los lee y los borra al cotizarlos. Sin UPDATE.
+GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO 'aalcuadrado_api'@'127.0.0.1';
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'127.0.0.1';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'127.0.0.1';
 FLUSH PRIVILEGES;
 
 -- Para revisar los permisos:

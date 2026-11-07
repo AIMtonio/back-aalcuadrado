@@ -449,6 +449,126 @@ describe('API (e2e)', () => {
       .expect(404);
   });
 
+  it('crea, lista y edita categorías, y las asigna a productos', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+
+    const creada = await request(http)
+      .post('/api/categorias')
+      .set(auth)
+      .send({ nombre: 'Arracadas' })
+      .expect(201);
+    expect(creada.body).toMatchObject({
+      slug: 'arracadas',
+      nombre: 'Arracadas',
+      orden: 0,
+      totalProductos: 0,
+    });
+
+    // Slug repetido: 409.
+    await request(http)
+      .post('/api/categorias')
+      .set(auth)
+      .send({ nombre: 'Arracadas' })
+      .expect(409);
+
+    const editada = await request(http)
+      .patch('/api/categorias/arracadas')
+      .set(auth)
+      .send({ orden: 5 })
+      .expect(200);
+    expect(editada.body.orden).toBe(5);
+
+    // Asignarla a un producto: aparece anidada en /api/productos.
+    const producto = await request(http)
+      .patch('/api/productos/nochebuena')
+      .set(auth)
+      .send({ categoriaId: creada.body.id })
+      .expect(200);
+    expect(producto.body.categoria).toMatchObject({
+      slug: 'arracadas',
+      nombre: 'Arracadas',
+    });
+
+    // Categoría que no existe: 400.
+    await request(http)
+      .patch('/api/productos/nochebuena')
+      .set(auth)
+      .send({ categoriaId: 999 })
+      .expect(400);
+
+    const lista = await request(http)
+      .get('/api/categorias')
+      .set(auth)
+      .expect(200);
+    expect(lista.body).toEqual([
+      expect.objectContaining({ slug: 'arracadas', totalProductos: 1 }),
+    ]);
+
+    // No se borra una categoría con productos asignados.
+    const conflicto = await request(http)
+      .delete('/api/categorias/arracadas')
+      .set(auth)
+      .expect(409);
+    expect(conflicto.body.message).toMatch(/tiene 1 producto/);
+
+    // Se le quita la categoría al producto y ya se puede borrar.
+    await request(http)
+      .patch('/api/productos/nochebuena')
+      .set(auth)
+      .send({ categoriaId: null })
+      .expect(200);
+    await request(http)
+      .delete('/api/categorias/arracadas')
+      .set(auth)
+      .expect(204);
+    await request(http).get('/api/categorias/arracadas').set(auth).expect(404);
+  });
+
+  it('crea pedidos de kits sin token, y solo el panel los lista y los borra', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    const datosPedido = {
+      clienteNombre: 'Ana',
+      clienteContacto: 'ana@correo.com',
+      jabonColor: 'Lavanda',
+      jabonAroma: 'Lavanda',
+      jabonForma: 'Corazón',
+      velaColor: 'Blanco',
+      velaAroma: 'Vainilla',
+      velaTopping: 'Flores secas',
+    };
+
+    // Pública: no pide token.
+    const creado = await request(http)
+      .post('/api/pedidos')
+      .send(datosPedido)
+      .expect(201);
+    expect(creado.body).toMatchObject(datosPedido);
+    expect(creado.body.creadoEn).toBeTruthy();
+
+    // Contacto que no es correo ni teléfono: 400.
+    await request(http)
+      .post('/api/pedidos')
+      .send({ ...datosPedido, clienteContacto: 'no-es-contacto' })
+      .expect(400);
+
+    // Un teléfono también sirve como contacto.
+    await request(http)
+      .post('/api/pedidos')
+      .send({ ...datosPedido, clienteContacto: '+52 55 1234 5678' })
+      .expect(201);
+
+    // Listar y borrar sí piden token.
+    await request(http).get('/api/pedidos').expect(401);
+    const lista = await request(http).get('/api/pedidos').set(auth).expect(200);
+    expect(lista.body).toHaveLength(2);
+
+    await request(http)
+      .delete(`/api/pedidos/${lista.body[0].id}`)
+      .set(auth)
+      .expect(204);
+    await request(http).delete('/api/pedidos/999999').set(auth).expect(404);
+  });
+
   it('publica el sitio llamando al Deploy Hook', async () => {
     const auth = { Authorization: `Bearer ${token}` };
     await request(http).post('/api/publicacion').expect(401);
@@ -548,6 +668,133 @@ describe('API (e2e)', () => {
     // Se acabó el cupo del día.
     const fin = await request(http).get('/api/disenos').expect(200);
     expect(fin.body).toEqual({ disponible: false, restantesHoy: 0 });
+  });
+
+  it('administra los colores y aromas de los kits', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    await request(http).get('/api/kits/colores').expect(401);
+
+    const rojo = await request(http)
+      .post('/api/kits/colores')
+      .set(auth)
+      .send({ nombre: '  Rojo   navidad ', hex: '#b3202a', enVela: false })
+      .expect(201);
+    expect(rojo.body).toMatchObject({
+      nombre: 'Rojo navidad',
+      hex: '#B3202A',
+      enJabon: true,
+      enVela: false,
+      disponible: true,
+      orden: 0,
+    });
+
+    // Validaciones: hex, nombre repetido (sin importar mayúsculas) y al menos una pieza.
+    await request(http)
+      .post('/api/kits/colores')
+      .set(auth)
+      .send({ nombre: 'Verde', hex: 'verde' })
+      .expect(400);
+    await request(http)
+      .post('/api/kits/colores')
+      .set(auth)
+      .send({ nombre: 'ROJO NAVIDAD', hex: '#000000' })
+      .expect(409);
+    const sinPieza = await request(http)
+      .post('/api/kits/colores')
+      .set(auth)
+      .send({ nombre: 'Gris', hex: '#888888', enJabon: false, enVela: false })
+      .expect(400);
+    expect(sinPieza.body.message).toMatch(/jabón, para la vela o para ambos/);
+
+    await request(http)
+      .post('/api/kits/colores')
+      .set(auth)
+      .send({ nombre: 'Dorado', hex: '#C9A227', orden: -1 })
+      .expect(201);
+    const lista = await request(http)
+      .get('/api/kits/colores')
+      .set(auth)
+      .expect(200);
+    expect(lista.body.map((c: { nombre: string }) => c.nombre)).toEqual([
+      'Dorado',
+      'Rojo navidad',
+    ]);
+
+    const editado = await request(http)
+      .patch(`/api/kits/colores/${rojo.body.id}`)
+      .set(auth)
+      .send({ disponible: false, enVela: true })
+      .expect(200);
+    expect(editado.body).toMatchObject({ disponible: false, enVela: true });
+    await request(http)
+      .patch(`/api/kits/colores/${rojo.body.id}`)
+      .set(auth)
+      .send({ enJabon: false, enVela: false })
+      .expect(400);
+    await request(http)
+      .patch(`/api/kits/colores/${rojo.body.id}`)
+      .set(auth)
+      .send({ nombre: 'dorado' })
+      .expect(409);
+
+    await request(http)
+      .delete(`/api/kits/colores/${rojo.body.id}`)
+      .set(auth)
+      .expect(204);
+    await request(http)
+      .delete(`/api/kits/colores/${rojo.body.id}`)
+      .set(auth)
+      .expect(404);
+
+    // Los aromas funcionan igual, sin hex.
+    const canela = await request(http)
+      .post('/api/kits/aromas')
+      .set(auth)
+      .send({ nombre: 'Canela', enJabon: false })
+      .expect(201);
+    expect(canela.body).toMatchObject({ nombre: 'Canela', enVela: true });
+    expect(canela.body.hex).toBeUndefined();
+    await request(http)
+      .patch(`/api/kits/aromas/${canela.body.id}`)
+      .set(auth)
+      .send({ nombre: 'Canela y clavo', orden: 3 })
+      .expect(200);
+    const aromas = await request(http)
+      .get('/api/kits/aromas')
+      .set(auth)
+      .expect(200);
+    expect(aromas.body).toHaveLength(1);
+    expect(aromas.body[0]).toMatchObject({
+      nombre: 'Canela y clavo',
+      orden: 3,
+    });
+  });
+
+  it('guarda las fotos de kits sin producto, en su carpeta', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    const res = await request(http)
+      .post('/api/imagenes')
+      .set(auth)
+      .field('categoria', 'kits')
+      .field('producto', 'nochebuena')
+      .attach('archivos', PNG, {
+        filename: 'kit-rojo.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+    expect(res.body[0]).toMatchObject({
+      categoria: 'kits',
+      producto: null,
+      color: null,
+    });
+    expect(res.body[0].url).toMatch(/\/uploads\/kits\//);
+    expect(existsSync(join(carpeta, 'kits', res.body[0].archivo))).toBe(true);
+
+    const kits = await request(http)
+      .get('/api/imagenes?categoria=kits')
+      .set(auth)
+      .expect(200);
+    expect(kits.body).toHaveLength(1);
   });
 
   it('sirve el panel', async () => {

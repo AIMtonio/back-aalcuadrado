@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Not, type Repository } from 'typeorm';
+import { Categoria } from '../categorias/categoria.entity.js';
 import { Imagen } from '../imagenes/imagen.entity.js';
 import { slugificar } from './catalogo.js';
 import type {
@@ -22,9 +23,17 @@ export interface ColorRespuesta {
   hex: string;
 }
 
+/** Una categoría tal como la trae un producto. */
+export interface CategoriaDeProducto {
+  id: number;
+  slug: string;
+  nombre: string;
+}
+
 /** Un producto tal como lo devuelve la API. */
-export type ProductoRespuesta = Omit<Producto, 'colores'> & {
+export type ProductoRespuesta = Omit<Producto, 'colores' | 'categoriaId'> & {
   colores: ColorRespuesta[];
+  categoria: CategoriaDeProducto | null;
   totalFotos: number;
 };
 
@@ -54,6 +63,8 @@ export class ProductosService {
   constructor(
     @InjectRepository(Producto) private readonly repo: Repository<Producto>,
     @InjectRepository(Imagen) private readonly imagenes: Repository<Imagen>,
+    @InjectRepository(Categoria)
+    private readonly categorias: Repository<Categoria>,
     @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
@@ -63,14 +74,25 @@ export class ProductosService {
       order: { nombre: 'ASC', colores: { orden: 'ASC', id: 'ASC' } },
     });
     const conteo = await this.contarFotos();
-    return productos.map((p) => this.respuesta(p, conteo.get(p.slug) ?? 0));
+    const categorias = await this.categoriasDe(productos);
+    return productos.map((p) =>
+      this.respuesta(
+        p,
+        conteo.get(p.slug) ?? 0,
+        p.categoriaId ? categorias.get(p.categoriaId) ?? null : null,
+      ),
+    );
   }
 
   async obtener(slug: string): Promise<ProductoRespuesta> {
     const producto = await this.buscar(slug);
+    const categoria = producto.categoriaId
+      ? await this.categorias.findOneBy({ id: producto.categoriaId })
+      : null;
     return this.respuesta(
       producto,
       (await this.contarFotos(slug)).get(slug) ?? 0,
+      categoria,
     );
   }
 
@@ -85,11 +107,13 @@ export class ProductosService {
         `Ya existe un producto con el slug "${slug}"`,
       );
     }
+    await this.validarCategoria(datos.categoriaId);
 
     const producto = this.repo.create({
       slug,
       nombre: datos.nombre.trim(),
       coleccion: datos.coleccion,
+      categoriaId: datos.categoriaId ?? null,
       descripcion: datos.descripcion?.trim() ?? '',
       etiqueta: datos.etiqueta ?? null,
       precio: datos.precio ?? null,
@@ -111,7 +135,11 @@ export class ProductosService {
     cambios: ActualizarProductoDto,
   ): Promise<ProductoRespuesta> {
     const producto = await this.buscar(slug);
-    const { colores, ...resto } = cambios;
+    const { colores, categoriaId, ...resto } = cambios;
+    if (categoriaId !== undefined) {
+      await this.validarCategoria(categoriaId);
+      producto.categoriaId = categoriaId;
+    }
     for (const [campo, valor] of Object.entries(resto)) {
       if (valor === undefined) continue;
       (producto as unknown as Record<string, unknown>)[campo] =
@@ -164,6 +192,28 @@ export class ProductosService {
     return producto;
   }
 
+  private async validarCategoria(
+    categoriaId: number | null | undefined,
+  ): Promise<void> {
+    if (categoriaId === null || categoriaId === undefined) return;
+    if (!(await this.categorias.exists({ where: { id: categoriaId } }))) {
+      throw new BadRequestException(`No existe la categoría ${categoriaId}`);
+    }
+  }
+
+  private async categoriasDe(productos: Producto[]): Promise<Map<number, Categoria>> {
+    const ids = [
+      ...new Set(
+        productos
+          .map((p) => p.categoriaId)
+          .filter((id): id is number => id !== null),
+      ),
+    ];
+    if (ids.length === 0) return new Map();
+    const filas = await this.categorias.find({ where: { id: In(ids) } });
+    return new Map(filas.map((c) => [c.id, c]));
+  }
+
   private filasDeColores(colores: ColorRespuesta[]): ProductoColor[] {
     return colores.map((c, orden) =>
       Object.assign(new ProductoColor(), {
@@ -190,10 +240,17 @@ export class ProductosService {
     return new Map(filas.map((f) => [f.producto, Number(f.total)]));
   }
 
-  private respuesta(producto: Producto, totalFotos: number): ProductoRespuesta {
-    const { colores, ...resto } = producto;
+  private respuesta(
+    producto: Producto,
+    totalFotos: number,
+    categoria: Categoria | null,
+  ): ProductoRespuesta {
+    const { colores, categoriaId: _categoriaId, ...resto } = producto;
     return {
       ...resto,
+      categoria: categoria
+        ? { id: categoria.id, slug: categoria.slug, nombre: categoria.nombre }
+        : null,
       colores: (colores ?? []).map((c) => ({
         id: c.colorId,
         nombre: c.nombre,

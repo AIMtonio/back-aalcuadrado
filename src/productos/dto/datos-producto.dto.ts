@@ -61,6 +61,14 @@ export class ActualizarProductoDto {
   })
   coleccion?: Coleccion;
 
+  /** Id de una categoría de `categorias`. `null` o `""` quita la categoría. */
+  @IsOptional()
+  @vacioANull()
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  categoriaId?: number | null;
+
   @IsOptional()
   @IsString()
   @MaxLength(240, {
