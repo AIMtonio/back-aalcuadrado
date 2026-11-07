@@ -4,11 +4,12 @@ API de [aalcuadrado](https://github.com/AIMtonio/front-aalcuadrado) hecha con Ne
 
 - **Login con JWT:** `POST /api/auth/login` es la única ruta pública de `/api` (junto con `/api/disenos` y `/api/pedidos`, pensadas para que el sitio las llame sin iniciar sesión). Todo lo demás pide `Authorization: Bearer <token>`.
 - **Un solo usuario**, que se crea por consola (no hay registro público).
-- **Panel** en `/panel/` para administrar productos, categorías, fotos y pedidos.
+- **Panel** en `/panel/` para administrar productos, categorías, fotos, kits y pedidos.
 - **Productos** (nombre, colección, categoría, colores, descripción, disponibilidad) en las tablas `productos` y `producto_colores`.
 - **Categorías de aretes** (tabla `categorias`), para agrupar los productos como quieras desde el panel.
 - **Fotos en disco**, en `UPLOADS_DIR/<categoria>/`, servidas en `/uploads/...` y registradas en la tabla `imagenes`. Cada foto de producto apunta a un producto y color que existen.
 - **Pedidos de kits** (jabón + vela, tabla `pedidos_kits`): el sitio está creciendo de aretes a también vender estos kits a la medida. El front manda el pedido (`POST /api/pedidos`, pública) y el dueño lo ve en el panel para cotizarlo y hacerlo a mano.
+- **Colores y aromas de kits** (tablas `kit_colores` y `kit_aromas`), para jabón, vela o ambos, que se marcan como disponibles o no desde la pestaña **Kits** del panel. Ahí mismo se suben las **fotos de kits** (categoría `kits`), que salen en la página de kits del sitio.
 
 ## Estructura
 
@@ -65,7 +66,7 @@ Abre <http://localhost:3000/panel/>.
 
 Las tablas las crean los scripts de `database/`, no la API (`synchronize: false`). El usuario de base de datos de la API solo tiene `SELECT, INSERT, UPDATE` en `usuarios`; `SELECT, INSERT, UPDATE, DELETE` en `imagenes`, `productos`, `producto_colores` y `categorias`; y `SELECT, INSERT, DELETE` en `pedidos_kits` (el panel no edita un pedido, solo lo borra al cotizarlo). Si agregas una tabla, agrégale su script y sus permisos.
 
-`01_crear_base_de_datos.sql` ya crea todas las tablas (instalación nueva). Si tu base es anterior a `categorias` o `pedidos_kits`, corre además `04_categorias.sql` y `05_pedidos_kits.sql` (y vuelve a correr `02_crear_usuario_bd.sql` para los permisos nuevos); los tres se pueden repetir sin dañar lo que ya existe.
+`01_crear_base_de_datos.sql` ya crea todas las tablas (instalación nueva). Si tu base es anterior a `categorias`, `pedidos_kits` o los kits, corre además `04_categorias.sql`, `05_pedidos_kits.sql` y `06_kits_opciones.sql` (y vuelve a correr `02_crear_usuario_bd.sql` para los permisos nuevos); todos se pueden repetir sin dañar lo que ya existe. `06` también carga los colores y aromas que el sitio tenía fijos.
 
 ## Despliegue
 

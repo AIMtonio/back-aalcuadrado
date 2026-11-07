@@ -22,6 +22,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.productos TO '${usuario}'@'%
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.producto_colores TO '${usuario}'@'%';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.categorias TO '${usuario}'@'%';
 GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO '${usuario}'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO '${usuario}'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO '${usuario}'@'%';
 FLUSH PRIVILEGES;
 SQL
 

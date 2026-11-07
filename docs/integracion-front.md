@@ -144,7 +144,7 @@ Categorías de aretes administradas desde el panel (pestaña Categorías), orden
 
 ### `GET /api/imagenes`
 
-Filtros opcionales: `categoria` (`productos` o `galeria`) y `producto` (slug). Sale ordenada por `orden` y luego por `id`.
+Filtros opcionales: `categoria` (`productos`, `galeria` o `kits`) y `producto` (slug). Sale ordenada por `orden` y luego por `id`.
 
 ```json
 [
@@ -170,6 +170,7 @@ Filtros opcionales: `categoria` (`productos` o `galeria`) y `producto` (slug). S
 | --- | --- |
 | `categoria: "productos"` | Fotos de un producto. |
 | `categoria: "galeria"` | Sección "Así se ven". |
+| `categoria: "kits"` | Sección "Así quedan" de la página de kits. |
 | `producto` | Slug de un producto que existe en la API. |
 | `color` | `id` de uno de los colores de ese producto, o `null`. |
 | `alt` | Texto alternativo. Si es `null`, el front arma uno ("Aretes Nochebuena, en color rojo"). |
@@ -336,6 +337,24 @@ Los ocho campos son obligatorios (texto, hasta 150 caracteres `clienteContacto` 
 | `429` | Más de 5 pedidos en un minuto desde la misma IP. |
 
 `GET /api/pedidos` y `DELETE /api/pedidos/:id` existen para el panel (piden token): el dueño los usa para ver los pedidos pendientes y borrarlos cuando ya los cotizó. El front no los necesita.
+
+## Colores, aromas y fotos de kits
+
+Se administran en la pestaña **Kits** del panel y el sitio los toma al compilar, como los productos: `npm run api:sincronizar` los guarda en `catalogo-api.json` (solo los **disponibles**) y descarga las fotos de kits a `src/content/fotos/api/kits/`.
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| `GET` | `/api/kits/colores` | `[{ id, nombre, hex, enJabon, enVela, disponible, orden }]`, por `orden` y nombre |
+| `GET` | `/api/kits/aromas` | `[{ id, nombre, enJabon, enVela, disponible, orden }]` |
+| `GET` | `/api/imagenes?categoria=kits` | Fotos de kits ya hechos, por `orden` (sin producto ni color) |
+
+Piden token (los usa el sincronizador). `POST`, `PATCH /:id` y `DELETE /:id` existen para el panel.
+
+En el front:
+
+- **"Arma tu kit"** ofrece, para cada lista (colores del jabón, aromas de la vela…), las opciones disponibles del panel marcadas para esa pieza. Si una lista queda vacía (o la API no tiene el módulo), usa la de `sitio.kits` y avisa al compilar. Las formas del jabón y los toppings de la vela siguen fijos en `sitio.kits`, porque cada uno tiene su dibujo en la vista previa.
+- **"Así quedan"**, en la página de kits, muestra las fotos de kits en el orden del panel. Sin fotos, la sección no sale.
+- Los pedidos guardan el **nombre** del color y del aroma: renombrar o borrar uno en el panel no cambia los pedidos que ya llegaron.
 
 ## Desarrollo local
 

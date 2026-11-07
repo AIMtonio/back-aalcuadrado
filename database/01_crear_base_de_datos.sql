@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- Fotos subidas desde el panel. El archivo vive en UPLOADS_DIR/<categoria>/<archivo>.
 CREATE TABLE IF NOT EXISTS imagenes (
   id               INT UNSIGNED   NOT NULL AUTO_INCREMENT,
-  categoria        ENUM('productos', 'galeria') NOT NULL,
+  categoria        ENUM('productos', 'galeria', 'kits') NOT NULL,
   archivo          VARCHAR(120)   NOT NULL COMMENT 'Nombre en disco, lo genera la API',
   nombre_original  VARCHAR(255)   NOT NULL,
   mime             VARCHAR(20)    NOT NULL,
@@ -107,4 +107,33 @@ CREATE TABLE IF NOT EXISTS pedidos_kits (
   creado_en         DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
   KEY idx_pedidos_kits_creado_en (creado_en)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Colores y aromas para armar los kits (jabón + vela), administrados desde el panel
+-- (pestaña Kits). Los pedidos guardan el nombre elegido, no el id.
+CREATE TABLE IF NOT EXISTS kit_colores (
+  id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  nombre          VARCHAR(60)   NOT NULL,
+  hex             VARCHAR(7)    NOT NULL COMMENT '#RRGGBB',
+  en_jabon        TINYINT(1)    NOT NULL DEFAULT 1,
+  en_vela         TINYINT(1)    NOT NULL DEFAULT 1,
+  disponible      TINYINT(1)    NOT NULL DEFAULT 1,
+  orden           INT           NOT NULL DEFAULT 0,
+  creado_en       DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  actualizado_en  DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_kit_colores_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS kit_aromas (
+  id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  nombre          VARCHAR(60)   NOT NULL,
+  en_jabon        TINYINT(1)    NOT NULL DEFAULT 1,
+  en_vela         TINYINT(1)    NOT NULL DEFAULT 1,
+  disponible      TINYINT(1)    NOT NULL DEFAULT 1,
+  orden           INT           NOT NULL DEFAULT 0,
+  creado_en       DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  actualizado_en  DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_kit_aromas_nombre (nombre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

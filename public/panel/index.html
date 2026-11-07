@@ -35,6 +35,7 @@
           <button type="button" class="pestana" data-pestana="productos">Productos</button>
           <button type="button" class="pestana" data-pestana="categorias">Categorías</button>
           <button type="button" class="pestana" data-pestana="galeria">Así se ven</button>
+          <button type="button" class="pestana" data-pestana="kits">Kits</button>
           <button type="button" class="pestana" data-pestana="pedidos">Pedidos</button>
         </nav>
         <div class="publicar" id="publicar" hidden>
@@ -74,6 +75,7 @@
                 <option value="">Todas</option>
                 <option value="productos">Productos</option>
                 <option value="galeria">Galería ("Así se ven")</option>
+                <option value="kits">Kits</option>
                 <option value="pendientes">No se ven en el sitio</option>
               </select>
             </label>
@@ -137,6 +139,53 @@
         </section>
       </main>
 
+      <main class="contenido" id="pestana-kits" hidden>
+        <section class="tarjeta" aria-labelledby="titulo-subir-kits">
+          <h2 id="titulo-subir-kits">Fotos de kits</h2>
+          <p class="nota">
+            Fotos de kits de jabón y vela ya hechos. Salen en la página de kits del sitio, en este orden;
+            usa las flechas para cambiarlo y luego presiona Publicar sitio.
+          </p>
+          <form id="form-kits" class="subir">
+            <label class="zona">
+              <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
+              <span class="zona__texto">Arrastra tus fotos aquí o <u>elígelas</u></span>
+              <span class="zona__ayuda">JPG, PNG, WebP o AVIF · hasta 10 por vez</span>
+            </label>
+            <ul class="previas" id="previas-kits"></ul>
+            <p class="error" id="error-kits" role="alert"></p>
+            <button type="submit" class="boton" id="boton-subir-kits">Subir</button>
+          </form>
+        </section>
+
+        <section aria-labelledby="titulo-fotos-kits">
+          <div class="barra">
+            <h2 id="titulo-fotos-kits">En el sitio <span id="total-fotos-kits" class="contador"></span></h2>
+          </div>
+          <p class="vacio" id="vacio-fotos-kits" hidden>Todavía no hay fotos de kits: la sección no sale en el sitio.</p>
+          <ol class="rejilla" id="rejilla-fotos-kits"></ol>
+        </section>
+
+        <section aria-labelledby="titulo-colores-kit">
+          <div class="barra">
+            <h2 id="titulo-colores-kit">Colores <span id="total-colores-kit" class="contador"></span></h2>
+            <button type="button" class="boton" data-nueva-opcion="color">Nuevo color</button>
+          </div>
+          <p class="nota">Los colores que tienes para el jabón y la vela. Desmarca "Disponible" cuando se te acabe uno.</p>
+          <p class="vacio" id="vacio-colores-kit" hidden>Todavía no hay colores: el sitio usa los de su configuración.</p>
+          <ul class="rejilla rejilla--opciones" id="rejilla-colores-kit"></ul>
+        </section>
+
+        <section aria-labelledby="titulo-aromas-kit">
+          <div class="barra">
+            <h2 id="titulo-aromas-kit">Aromas <span id="total-aromas-kit" class="contador"></span></h2>
+            <button type="button" class="boton" data-nueva-opcion="aroma">Nuevo aroma</button>
+          </div>
+          <p class="vacio" id="vacio-aromas-kit" hidden>Todavía no hay aromas: el sitio usa los de su configuración.</p>
+          <ul class="rejilla rejilla--opciones" id="rejilla-aromas-kit"></ul>
+        </section>
+      </main>
+
       <main class="contenido" id="pestana-pedidos" hidden>
         <section aria-labelledby="titulo-pedidos">
           <div class="barra">
@@ -159,6 +208,7 @@
         <select name="categoria" required>
           <option value="productos">Producto</option>
           <option value="galeria">Galería ("Así se ven")</option>
+          <option value="kits">Kits (jabón y vela)</option>
         </select>
       </label>
       <label data-solo-productos>
@@ -238,6 +288,20 @@
           <h3 class="categoria__nombre"></h3>
           <span class="contador categoria__total"></span>
         </div>
+        <div class="foto__acciones">
+          <button type="button" class="boton boton--chico" data-accion="editar">Editar</button>
+          <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Borrar</button>
+        </div>
+      </li>
+    </template>
+
+    <template id="plantilla-opcion">
+      <li class="opcion tarjeta">
+        <div class="opcion__cabeza">
+          <span class="muestra opcion__muestra" hidden></span>
+          <h3 class="opcion__nombre"></h3>
+        </div>
+        <p class="producto__insignias opcion__insignias"></p>
         <div class="foto__acciones">
           <button type="button" class="boton boton--chico" data-accion="editar">Editar</button>
           <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Borrar</button>
@@ -368,6 +432,43 @@
         <div class="dialogo__acciones">
           <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
           <button type="submit" class="boton" id="boton-guardar-categoria">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dialogo-opcion" class="dialogo tarjeta" aria-labelledby="titulo-opcion">
+      <form id="form-opcion" novalidate>
+        <div class="dialogo__encabezado">
+          <h2 id="titulo-opcion">Nuevo color</h2>
+          <button type="button" class="enlace" data-cerrar aria-label="Cerrar">✕</button>
+        </div>
+        <div class="campos">
+          <label>
+            Nombre
+            <input name="nombre" required maxlength="60" placeholder="Rojo navidad" />
+          </label>
+          <label data-solo-color>
+            Color
+            <input name="hex" type="color" value="#B3202A" />
+          </label>
+          <label>
+            <span>Orden <small>(opcional; el más bajo sale primero)</small></span>
+            <input name="orden" type="number" step="1" />
+          </label>
+          <fieldset class="piezas campos__ancho">
+            <legend>Se ofrece para</legend>
+            <label class="casilla"><input type="checkbox" name="enJabon" checked /> Jabón</label>
+            <label class="casilla"><input type="checkbox" name="enVela" checked /> Vela</label>
+          </fieldset>
+          <label class="casilla campos__ancho">
+            <input type="checkbox" name="disponible" checked />
+            Disponible <small>(si no, no sale en el sitio)</small>
+          </label>
+        </div>
+        <p class="error" id="error-opcion" role="alert"></p>
+        <div class="dialogo__acciones">
+          <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
+          <button type="submit" class="boton" id="boton-guardar-opcion">Guardar</button>
         </div>
       </form>
     </dialog>

@@ -7,6 +7,7 @@ import { CategoriasModule } from './categorias/categorias.module.js';
 import { validarEntorno, type Entorno } from './config/entorno.js';
 import { DisenosModule } from './disenos/disenos.module.js';
 import { ImagenesModule } from './imagenes/imagenes.module.js';
+import { KitsModule } from './kits/kits.module.js';
 import { PedidosModule } from './pedidos/pedidos.module.js';
 import { ProductosModule } from './productos/productos.module.js';
 import { PublicacionModule } from './publicacion/publicacion.module.js';
@@ -20,6 +21,7 @@ export const MODULOS_DE_NEGOCIO = [
   CategoriasModule,
   ProductosModule,
   PedidosModule,
+  KitsModule,
   PublicacionModule,
   DisenosModule,
 ];

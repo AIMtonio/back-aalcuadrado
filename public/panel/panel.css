@@ -748,6 +748,55 @@ textarea {
   font-size: 1.05rem;
 }
 
+/* Colores y aromas de kits */
+.rejilla--opciones {
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
+
+.opcion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.opcion--agotada {
+  opacity: 0.65;
+}
+
+.opcion__cabeza {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.opcion__muestra {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  flex: none;
+}
+
+.opcion__nombre {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.piezas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.piezas legend {
+  width: 100%;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+}
+
 /* Tarjetas de pedido */
 .rejilla--pedidos {
   grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));

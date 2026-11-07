@@ -1,5 +1,6 @@
 // Panel de aalcuadrado: inicia sesión, administra productos y sube fotos
-// (de productos y de la sección "Así se ven").
+// (de productos, de la sección "Así se ven" y de kits). También los colores
+// y aromas para armar kits.
 // Habla con la API del mismo dominio (/api). El token vive en sessionStorage:
 // se borra al cerrar la pestaña.
 
@@ -25,15 +26,18 @@ const formEditar = $('#form-editar');
 const formProducto = $('#form-producto');
 const formGaleria = $('#form-galeria');
 const formCategoria = $('#form-categoria');
+const formOpcion = $('#form-opcion');
 const dialogoEditar = $('#dialogo-editar');
 const dialogoProducto = $('#dialogo-producto');
 const dialogoCategoria = $('#dialogo-categoria');
+const dialogoOpcion = $('#dialogo-opcion');
 const inputArchivos = formSubir.elements.archivos;
 const rejilla = $('#rejilla');
 const rejillaProductos = $('#rejilla-productos');
 const rejillaGaleria = $('#rejilla-galeria');
 const rejillaCategorias = $('#rejilla-categorias');
 const rejillaPedidos = $('#rejilla-pedidos');
+const rejillaFotosKits = $('#rejilla-fotos-kits');
 const filtro = $('#filtro');
 
 /* ---------- Almacenamiento (puede no estar disponible) ---------- */
@@ -102,7 +106,9 @@ function cerrarSesion(mensaje = '') {
   rejillaGaleria.replaceChildren();
   rejillaCategorias.replaceChildren();
   rejillaPedidos.replaceChildren();
-  for (const dialogo of [dialogoEditar, dialogoProducto, dialogoCategoria]) if (dialogo.open) dialogo.close();
+  rejillaFotosKits.replaceChildren();
+  for (const tipo of Object.values(TIPOS_OPCION)) tipo.rejilla.replaceChildren();
+  for (const dialogo of [dialogoEditar, dialogoProducto, dialogoCategoria, dialogoOpcion]) if (dialogo.open) dialogo.close();
   $('#error-login').textContent = mensaje;
   mostrar('login');
   formLogin.elements.usuario.focus();
@@ -114,7 +120,7 @@ async function entrarAlPanel() {
   mostrar('panel');
   cambiarPestana(leer(CLAVE_PESTANA) ?? 'fotos');
   await Promise.all([cargarCatalogo(), cargarCategorias()]);
-  await Promise.all([cargarFotos(), cargarGaleria(), cargarPedidos()]);
+  await Promise.all([cargarFotos(), cargarGaleria(), cargarFotosKits(), cargarOpcionesKit(), cargarPedidos()]);
   await cargarPublicacion();
 }
 
@@ -154,6 +160,7 @@ function cambiarPestana(nombre) {
   $('#pestana-productos').hidden = nombre !== 'productos';
   $('#pestana-categorias').hidden = nombre !== 'categorias';
   $('#pestana-galeria').hidden = nombre !== 'galeria';
+  $('#pestana-kits').hidden = nombre !== 'kits';
   $('#pestana-pedidos').hidden = nombre !== 'pedidos';
   escribir(CLAVE_PESTANA, nombre);
 }
@@ -235,7 +242,7 @@ function avisar(texto) {
 
 /** Después de subir, editar o borrar una foto o un producto: estas vistas dependen de ellos. */
 function recargar() {
-  return Promise.all([cargarFotos(), cargarGaleria(), cargarCatalogo(), cargarCategorias()]);
+  return Promise.all([cargarFotos(), cargarGaleria(), cargarCatalogo(), cargarCategorias(), cargarFotosKits()]);
 }
 
 /** "Rosa mexicano" → `rosa-mexicano`. Igual que `slugificar` del front y de la API. */
@@ -706,10 +713,13 @@ function actualizarCampos(form) {
 function sugerirAlt(form) {
   const producto = buscarProducto(form.elements.producto.value);
   const color = producto?.colores.find((c) => c.id === form.elements.color.value);
+  const categoria = form.elements.categoria.value;
   form.elements.alt.placeholder =
-    form.elements.categoria.value === 'galeria'
+    categoria === 'galeria'
       ? 'Aretes en su caja, sobre la mesa'
-      : producto
+      : categoria === 'kits'
+        ? 'Kit de jabón en forma de árbol y vela roja con canela'
+        : producto
         ? [`Aretes ${producto.nombre}`, color && `en color ${color.nombre.toLowerCase()}`].filter(Boolean).join(', ')
         : 'Aretes Nochebuena, en color rojo';
 }
@@ -860,7 +870,11 @@ function pintarFoto(imagen, mover) {
   if (color) titulo.append(muestraDeColor(color.hex));
   const nombre = document.createElement('strong');
   nombre.textContent =
-    imagen.categoria === 'galeria' ? 'Así se ven' : (producto?.nombre ?? imagen.producto ?? 'Sin producto');
+    imagen.categoria === 'galeria'
+      ? 'Así se ven'
+      : imagen.categoria === 'kits'
+        ? 'Kits'
+        : (producto?.nombre ?? imagen.producto ?? 'Sin producto');
   titulo.append(nombre);
   const detalle = [color?.nombre ?? imagen.color, `orden ${imagen.orden}`].filter(Boolean).join(' · ');
   titulo.append(` · ${detalle}`);
@@ -922,82 +936,265 @@ async function cargarFotos() {
 
 filtro.addEventListener('change', () => cargarFotos().catch((e) => avisar(e.message)));
 
-/* ---------- Así se ven (galería) ---------- */
+/* ---------- Fotos con orden propio: "Así se ven" y kits ---------- */
 
-/** Las fotos de la galería en el orden en que salen en el sitio. */
-let galeria = [];
+/**
+ * Una sección de fotos de una sola categoría que se ordenan con flechas y se
+ * suben al final. La usan "Así se ven" (galeria) y "Fotos de kits" (kits).
+ */
+function seccionDeFotos({ categoria, form, rejilla, total, vacio, previas, error, boton }) {
+  /** Las fotos en el orden en que salen en el sitio. */
+  let fotos = [];
 
-async function cargarGaleria() {
-  galeria = await api('/imagenes?categoria=galeria');
-  rejillaGaleria.replaceChildren(
-    ...galeria.map((imagen, i) => {
-      const nodo = pintarFoto(imagen, moverEnGaleria);
-      $('[data-accion="antes"]', nodo).disabled = i === 0;
-      $('[data-accion="despues"]', nodo).disabled = i === galeria.length - 1;
+  async function cargar() {
+    fotos = await api(`/imagenes?categoria=${categoria}`);
+    rejilla.replaceChildren(
+      ...fotos.map((imagen, i) => {
+        const nodo = pintarFoto(imagen, mover);
+        $('[data-accion="antes"]', nodo).disabled = i === 0;
+        $('[data-accion="despues"]', nodo).disabled = i === fotos.length - 1;
+        return nodo;
+      }),
+    );
+    total.textContent = `(${fotos.length})`;
+    vacio.hidden = fotos.length > 0;
+  }
+
+  /** Cambia una foto de lugar y renumera todas (0, 1, 2…) para que el orden quede limpio. */
+  async function mover(imagen, paso) {
+    const lista = [...fotos];
+    const desde = lista.findIndex((i) => i.id === imagen.id);
+    const hasta = desde + paso;
+    if (hasta < 0 || hasta >= lista.length) return;
+    [lista[desde], lista[hasta]] = [lista[hasta], lista[desde]];
+    rejilla.setAttribute('aria-busy', 'true');
+    try {
+      await Promise.all(
+        lista.map((foto, orden) =>
+          foto.orden === orden ? null : api(`/imagenes/${foto.id}`, { method: 'PATCH', json: { orden } }),
+        ),
+      );
+    } catch (e) {
+      avisar(e.message);
+    } finally {
+      rejilla.removeAttribute('aria-busy');
+      await cargar().catch((e) => avisar(e.message));
+      if (filtro.value === '' || filtro.value === categoria) cargarFotos().catch((e) => avisar(e.message));
+    }
+  }
+
+  const mostrarPrevias = previasDe(form.elements.archivos, previas);
+
+  form.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const input = form.elements.archivos;
+    error.textContent = '';
+    if (input.files.length > 10) {
+      error.textContent = 'Sube como máximo 10 fotos por vez.';
+      return;
+    }
+
+    const datos = new FormData();
+    for (const archivo of input.files) datos.append('archivos', archivo);
+    datos.append('categoria', categoria);
+    // Al final de la sección: después de la que tenga el orden más alto.
+    datos.append('orden', String(fotos.reduce((max, f) => Math.max(max, f.orden + 1), 0)));
+
+    boton.disabled = true;
+    boton.textContent = 'Subiendo…';
+    try {
+      const subidas = await api('/imagenes', { method: 'POST', body: datos });
+      avisar(subidas.length === 1 ? 'Foto subida' : `${subidas.length} fotos subidas`);
+      input.value = '';
+      mostrarPrevias();
+      await recargar();
+    } catch (e) {
+      error.textContent = e.estado === 413 ? 'Una de las fotos pesa demasiado.' : e.message;
+    } finally {
+      boton.disabled = false;
+      boton.textContent = 'Subir';
+    }
+  });
+
+  return cargar;
+}
+
+const cargarGaleria = seccionDeFotos({
+  categoria: 'galeria',
+  form: formGaleria,
+  rejilla: rejillaGaleria,
+  total: $('#total-galeria'),
+  vacio: $('#nota-galeria-vacia'),
+  previas: $('#previas-galeria'),
+  error: $('#error-galeria'),
+  boton: $('#boton-subir-galeria'),
+});
+
+const cargarFotosKits = seccionDeFotos({
+  categoria: 'kits',
+  form: $('#form-kits'),
+  rejilla: rejillaFotosKits,
+  total: $('#total-fotos-kits'),
+  vacio: $('#vacio-fotos-kits'),
+  previas: $('#previas-kits'),
+  error: $('#error-kits'),
+  boton: $('#boton-subir-kits'),
+});
+
+/* ---------- Colores y aromas de kits ---------- */
+
+/** Lo que cambia entre colores y aromas: ruta de la API, textos y dónde se pintan. */
+const TIPOS_OPCION = {
+  color: {
+    ruta: '/kits/colores',
+    nuevo: 'Nuevo color',
+    nombre: 'color',
+    placeholder: 'Rojo navidad',
+    rejilla: $('#rejilla-colores-kit'),
+    total: $('#total-colores-kit'),
+    vacio: $('#vacio-colores-kit'),
+    lista: [],
+  },
+  aroma: {
+    ruta: '/kits/aromas',
+    nuevo: 'Nuevo aroma',
+    nombre: 'aroma',
+    placeholder: 'Canela',
+    rejilla: $('#rejilla-aromas-kit'),
+    total: $('#total-aromas-kit'),
+    vacio: $('#vacio-aromas-kit'),
+    lista: [],
+  },
+};
+
+async function cargarOpcionesKit() {
+  await Promise.all(
+    Object.entries(TIPOS_OPCION).map(async ([clave, tipo]) => {
+      tipo.lista = await api(tipo.ruta);
+      pintarOpciones(clave);
+    }),
+  );
+}
+
+function pintarOpciones(clave) {
+  const tipo = TIPOS_OPCION[clave];
+  const plantilla = $('#plantilla-opcion');
+  tipo.rejilla.replaceChildren(
+    ...tipo.lista.map((opcion) => {
+      const nodo = plantilla.content.firstElementChild.cloneNode(true);
+      nodo.classList.toggle('opcion--agotada', !opcion.disponible);
+      $('.opcion__nombre', nodo).textContent = opcion.nombre;
+      if (opcion.hex) {
+        const muestra = $('.opcion__muestra', nodo);
+        muestra.hidden = false;
+        muestra.style.background = opcion.hex;
+        muestra.title = opcion.hex;
+      }
+      const piezas = [opcion.enJabon && 'Jabón', opcion.enVela && 'Vela'].filter(Boolean).join(' y ');
+      const insignias = [piezas, !opcion.disponible && 'No disponible', opcion.orden !== 0 && `orden ${opcion.orden}`];
+      $('.opcion__insignias', nodo).replaceChildren(
+        ...insignias.filter(Boolean).map((texto) => {
+          const span = document.createElement('span');
+          span.className = 'insignia';
+          if (texto === 'No disponible') span.classList.add('insignia--alerta');
+          span.textContent = texto;
+          return span;
+        }),
+      );
+      $('[data-accion="editar"]', nodo).addEventListener('click', () => abrirOpcion(clave, opcion));
+      $('[data-accion="borrar"]', nodo).addEventListener('click', () => borrarOpcion(clave, opcion));
       return nodo;
     }),
   );
-  $('#total-galeria').textContent = `(${galeria.length})`;
-  $('#nota-galeria-vacia').hidden = galeria.length > 0;
+  tipo.total.textContent = `(${tipo.lista.length})`;
+  tipo.vacio.hidden = tipo.lista.length > 0;
 }
 
-/** Cambia una foto de lugar y renumera todas (0, 1, 2…) para que el orden quede limpio. */
-async function moverEnGaleria(imagen, paso) {
-  const lista = [...galeria];
-  const desde = lista.findIndex((i) => i.id === imagen.id);
-  const hasta = desde + paso;
-  if (hasta < 0 || hasta >= lista.length) return;
-  [lista[desde], lista[hasta]] = [lista[hasta], lista[desde]];
-  rejillaGaleria.setAttribute('aria-busy', 'true');
-  try {
-    await Promise.all(
-      lista.map((foto, orden) =>
-        foto.orden === orden ? null : api(`/imagenes/${foto.id}`, { method: 'PATCH', json: { orden } }),
-      ),
-    );
-  } catch (e) {
-    avisar(e.message);
-  } finally {
-    rejillaGaleria.removeAttribute('aria-busy');
-    await cargarGaleria().catch((e) => avisar(e.message));
-    if (filtro.value !== 'productos') cargarFotos().catch((e) => avisar(e.message));
+/** Qué se está editando en el diálogo: `{ clave: 'color' | 'aroma', opcion: {...} | null }`. */
+let opcionEditando = null;
+
+for (const boton of document.querySelectorAll('[data-nueva-opcion]')) {
+  boton.addEventListener('click', () => abrirOpcion(boton.dataset.nuevaOpcion, null));
+}
+
+function abrirOpcion(clave, opcion) {
+  const tipo = TIPOS_OPCION[clave];
+  opcionEditando = { clave, opcion };
+  formOpcion.reset();
+  $('#error-opcion').textContent = '';
+  $('#titulo-opcion').textContent = opcion ? `Editar ${opcion.nombre}` : tipo.nuevo;
+  const campos = formOpcion.elements;
+  campos.nombre.placeholder = tipo.placeholder;
+  const esColor = clave === 'color';
+  $('[data-solo-color]', formOpcion).hidden = !esColor;
+  campos.hex.disabled = !esColor;
+  if (opcion) {
+    campos.nombre.value = opcion.nombre;
+    if (esColor) campos.hex.value = opcion.hex;
+    campos.orden.value = opcion.orden || '';
+    campos.enJabon.checked = opcion.enJabon;
+    campos.enVela.checked = opcion.enVela;
+    campos.disponible.checked = opcion.disponible;
   }
+  dialogoOpcion.showModal();
+  campos.nombre.focus();
 }
 
-const mostrarPreviasGaleria = previasDe(formGaleria.elements.archivos, $('#previas-galeria'));
+for (const boton of dialogoOpcion.querySelectorAll('[data-cerrar]')) {
+  boton.addEventListener('click', () => dialogoOpcion.close());
+}
 
-formGaleria.addEventListener('submit', async (evento) => {
+formOpcion.addEventListener('submit', async (evento) => {
   evento.preventDefault();
-  const input = formGaleria.elements.archivos;
-  const error = $('#error-galeria');
-  const boton = $('#boton-subir-galeria');
+  const error = $('#error-opcion');
   error.textContent = '';
-  if (input.files.length > 10) {
-    error.textContent = 'Sube como máximo 10 fotos por vez.';
+  if (!formOpcion.reportValidity() || !opcionEditando) return;
+
+  const campos = formOpcion.elements;
+  if (!campos.enJabon.checked && !campos.enVela.checked) {
+    error.textContent = 'Marca si es para el jabón, para la vela o para ambos.';
     return;
   }
+  const { clave, opcion } = opcionEditando;
+  const tipo = TIPOS_OPCION[clave];
+  const datos = {
+    nombre: campos.nombre.value.trim(),
+    ...(clave === 'color' && { hex: campos.hex.value.toUpperCase() }),
+    orden: Number(campos.orden.value || 0),
+    enJabon: campos.enJabon.checked,
+    enVela: campos.enVela.checked,
+    disponible: campos.disponible.checked,
+  };
 
-  const datos = new FormData();
-  for (const archivo of input.files) datos.append('archivos', archivo);
-  datos.append('categoria', 'galeria');
-  // Al final de la sección: después de la que tenga el orden más alto.
-  datos.append('orden', String(galeria.reduce((max, f) => Math.max(max, f.orden + 1), 0)));
-
+  const boton = $('#boton-guardar-opcion');
   boton.disabled = true;
-  boton.textContent = 'Subiendo…';
   try {
-    const subidas = await api('/imagenes', { method: 'POST', body: datos });
-    avisar(subidas.length === 1 ? 'Foto subida' : `${subidas.length} fotos subidas`);
-    input.value = '';
-    mostrarPreviasGaleria();
-    await recargar();
+    opcion
+      ? await api(`${tipo.ruta}/${opcion.id}`, { method: 'PATCH', json: datos })
+      : await api(tipo.ruta, { method: 'POST', json: datos });
+    dialogoOpcion.close();
+    avisar(opcion ? 'Cambios guardados' : `"${datos.nombre}" agregado`);
+    await cargarOpcionesKit();
   } catch (e) {
-    error.textContent = e.estado === 413 ? 'Una de las fotos pesa demasiado.' : e.message;
+    error.textContent = e.message;
   } finally {
     boton.disabled = false;
-    boton.textContent = 'Subir';
   }
 });
+
+async function borrarOpcion(clave, opcion) {
+  const consejo = opcion.disponible ? ' Si solo se te acabó, mejor edítalo y desmarca "Disponible".' : '';
+  if (!window.confirm(`¿Borrar el ${TIPOS_OPCION[clave].nombre} "${opcion.nombre}"? No se puede deshacer.${consejo}`)) {
+    return;
+  }
+  try {
+    await api(`${TIPOS_OPCION[clave].ruta}/${opcion.id}`, { method: 'DELETE' });
+    avisar('Borrado');
+    await cargarOpcionesKit();
+  } catch (e) {
+    avisar(e.message);
+  }
+}
 
 /* ---------- Inicio ---------- */
 

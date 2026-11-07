@@ -39,6 +39,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.categorias TO 'aalcuadrado_a
 GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO 'aalcuadrado_api'@'localhost';
 GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO 'aalcuadrado_api'@'127.0.0.1';
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'127.0.0.1';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'127.0.0.1';
 FLUSH PRIVILEGES;
 
 -- Para revisar los permisos:

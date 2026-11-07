@@ -868,6 +868,224 @@
       ]
     },
     {
+      "name": "Kits (colores y aromas)",
+      "description": "Colores y aromas para armar kits de jabón y vela. Piden token. Las fotos de kits se suben en Imágenes con categoria=kits.",
+      "item": [
+        {
+          "name": "Listar colores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/colores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "colores"
+              ]
+            },
+            "description": "Por orden y nombre, incluidos los no disponibles."
+          }
+        },
+        {
+          "name": "Crear color",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/colores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "colores"
+              ]
+            },
+            "description": "201. 409 si ya existe uno con ese nombre (sin importar mayúsculas ni acentos). 400 si no es para jabón ni para vela.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Rojo navidad\",\n  \"hex\": \"#B3202A\",\n  \"enJabon\": true,\n  \"enVela\": true,\n  \"disponible\": true,\n  \"orden\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Editar color",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/colores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "colores",
+                "1"
+              ]
+            },
+            "description": "Solo los campos que cambian.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disponible\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Borrar color",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/colores/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "colores",
+                "1"
+              ]
+            },
+            "description": "204."
+          }
+        },
+        {
+          "name": "Listar aromas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/aromas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "aromas"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear aroma",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/aromas",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "aromas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Canela\",\n  \"enJabon\": true,\n  \"enVela\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Editar aroma",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/aromas/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "aromas",
+                "1"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"enJabon\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Borrar aroma",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/aromas/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "aromas",
+                "1"
+              ]
+            },
+            "description": "204."
+          }
+        }
+      ]
+    },
+    {
       "name": "Archivos",
       "item": [
         {
