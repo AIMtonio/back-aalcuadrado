@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "aalcuadrado API",
-    "description": "API de aalcuadrado: login con JWT, productos y fotos.\n\n1. Ajusta las variables de la colección (`baseUrl`, `usuario`, `password`).\n2. Ejecuta **Auth → Login**: guarda el token en `token`.\n3. Todas las demás peticiones usan ese token (Bearer, heredado de la colección).\n\nCrea un producto (**Productos → Crear**) antes de subir sus fotos.\n\nDocumentación: docs/integracion-front.md",
+    "description": "API de aalcuadrado: login con JWT, productos (con categorías de aretes), fotos y pedidos de kits (jabón + vela).\n\n1. Ajusta las variables de la colección (`baseUrl`, `usuario`, `password`).\n2. Ejecuta **Auth → Login**: guarda el token en `token`.\n3. Todas las demás peticiones usan ese token (Bearer, heredado de la colección), salvo **Pedidos → Crear** y **Diseños con IA**, que son públicas.\n\nCrea un producto (**Productos → Crear**) antes de subir sus fotos.\n\nDocumentación: docs/integracion-front.md",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -52,6 +52,16 @@
     },
     {
       "key": "productoSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoriaSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pedidoId",
       "value": "",
       "type": "string"
     }
@@ -323,6 +333,134 @@
       ]
     },
     {
+      "name": "Categorías",
+      "item": [
+        {
+          "name": "Listar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categorias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categorias"
+              ]
+            },
+            "description": "Categorías de aretes, con `totalProductos` cada una."
+          }
+        },
+        {
+          "name": "Crear",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categorias",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categorias"
+              ]
+            },
+            "description": "`nombre` obligatorio. Sin `slug`, se arma del nombre. Guarda el slug en la variable `categoriaSlug`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Arracadas\",\n  \"orden\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('categoriaSlug', pm.response.json().slug);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Obtener",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categorias/{{categoriaSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categorias",
+                "{{categoriaSlug}}"
+              ]
+            },
+            "description": "Una categoría por slug."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categorias/{{categoriaSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categorias",
+                "{{categoriaSlug}}"
+              ]
+            },
+            "description": "`nombre` y/o `orden`, todo opcional. El slug no cambia.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orden\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/categorias/{{categoriaSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "categorias",
+                "{{categoriaSlug}}"
+              ]
+            },
+            "description": "204. Si la categoría tiene productos asignados responde 409."
+          }
+        }
+      ]
+    },
+    {
       "name": "Imágenes",
       "item": [
         {
@@ -535,6 +673,96 @@
               ]
             },
             "description": "Borra el registro y el archivo. Responde 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pedidos de kits (jabón + vela)",
+      "description": "El sitio está creciendo de aretes a también vender kits de jabón + vela a la medida. Crear un pedido es público (sin token); listarlos y borrarlos es para el panel.",
+      "item": [
+        {
+          "name": "Crear (público)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/pedidos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "description": "Los 8 campos son obligatorios. `clienteContacto` es un correo o un teléfono. Sin catálogo fijo de colores/aromas/formas/toppings: el front manda lo que elija quien visita. Máximo 5 por minuto por IP. Guarda el `id` en la variable `pedidoId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteNombre\": \"Ana\",\n  \"clienteContacto\": \"ana@correo.com\",\n  \"jabonColor\": \"Lavanda\",\n  \"jabonAroma\": \"Lavanda\",\n  \"jabonForma\": \"Corazón\",\n  \"velaColor\": \"Blanco\",\n  \"velaAroma\": \"Vainilla\",\n  \"velaTopping\": \"Flores secas\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('pedidoId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pedidos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pedidos"
+              ]
+            },
+            "description": "Pedidos de kits, del más reciente al más viejo. Pide token (lo usa el panel para cotizarlos a mano)."
+          }
+        },
+        {
+          "name": "Borrar",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pedidos/{{pedidoId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "pedidos",
+                "{{pedidoId}}"
+              ]
+            },
+            "description": "204. Bórralo cuando ya lo hayas cotizado y hecho el pedido."
           }
         }
       ]

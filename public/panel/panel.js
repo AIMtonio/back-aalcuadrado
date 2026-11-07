@@ -24,12 +24,16 @@ const formSubir = $('#form-subir');
 const formEditar = $('#form-editar');
 const formProducto = $('#form-producto');
 const formGaleria = $('#form-galeria');
+const formCategoria = $('#form-categoria');
 const dialogoEditar = $('#dialogo-editar');
 const dialogoProducto = $('#dialogo-producto');
+const dialogoCategoria = $('#dialogo-categoria');
 const inputArchivos = formSubir.elements.archivos;
 const rejilla = $('#rejilla');
 const rejillaProductos = $('#rejilla-productos');
 const rejillaGaleria = $('#rejilla-galeria');
+const rejillaCategorias = $('#rejilla-categorias');
+const rejillaPedidos = $('#rejilla-pedidos');
 const filtro = $('#filtro');
 
 /* ---------- Almacenamiento (puede no estar disponible) ---------- */
@@ -96,7 +100,9 @@ function cerrarSesion(mensaje = '') {
   rejilla.replaceChildren();
   rejillaProductos.replaceChildren();
   rejillaGaleria.replaceChildren();
-  for (const dialogo of [dialogoEditar, dialogoProducto]) if (dialogo.open) dialogo.close();
+  rejillaCategorias.replaceChildren();
+  rejillaPedidos.replaceChildren();
+  for (const dialogo of [dialogoEditar, dialogoProducto, dialogoCategoria]) if (dialogo.open) dialogo.close();
   $('#error-login').textContent = mensaje;
   mostrar('login');
   formLogin.elements.usuario.focus();
@@ -107,8 +113,8 @@ async function entrarAlPanel() {
   $('#nombre-usuario').textContent = yo.usuario;
   mostrar('panel');
   cambiarPestana(leer(CLAVE_PESTANA) ?? 'fotos');
-  await cargarCatalogo();
-  await Promise.all([cargarFotos(), cargarGaleria()]);
+  await Promise.all([cargarCatalogo(), cargarCategorias()]);
+  await Promise.all([cargarFotos(), cargarGaleria(), cargarPedidos()]);
   await cargarPublicacion();
 }
 
@@ -146,7 +152,9 @@ function cambiarPestana(nombre) {
   }
   $('#pestana-fotos').hidden = nombre !== 'fotos';
   $('#pestana-productos').hidden = nombre !== 'productos';
+  $('#pestana-categorias').hidden = nombre !== 'categorias';
   $('#pestana-galeria').hidden = nombre !== 'galeria';
+  $('#pestana-pedidos').hidden = nombre !== 'pedidos';
   escribir(CLAVE_PESTANA, nombre);
 }
 
@@ -225,9 +233,9 @@ function avisar(texto) {
 
 /* ---------- Utilidades ---------- */
 
-/** Después de subir, editar o borrar una foto: las tres vistas dependen de ella. */
+/** Después de subir, editar o borrar una foto o un producto: estas vistas dependen de ellos. */
 function recargar() {
-  return Promise.all([cargarFotos(), cargarGaleria(), cargarCatalogo()]);
+  return Promise.all([cargarFotos(), cargarGaleria(), cargarCatalogo(), cargarCategorias()]);
 }
 
 /** "Rosa mexicano" → `rosa-mexicano`. Igual que `slugificar` del front y de la API. */
@@ -279,7 +287,12 @@ function pintarProductos() {
       const nodo = plantilla.content.firstElementChild.cloneNode(true);
       nodo.classList.toggle('producto--agotado', !producto.disponible);
       $('.producto__nombre', nodo).textContent = producto.nombre;
-      $('.producto__coleccion', nodo).textContent = NOMBRES_COLECCION[producto.coleccion] ?? producto.coleccion;
+      $('.producto__coleccion', nodo).textContent = [
+        NOMBRES_COLECCION[producto.coleccion] ?? producto.coleccion,
+        producto.categoria?.nombre,
+      ]
+        .filter(Boolean)
+        .join(' · ');
 
       const colores = $('.producto__colores', nodo);
       for (const color of producto.colores) {
@@ -403,6 +416,7 @@ function abrirProducto(producto) {
     campos.slug.value = producto.slug;
     campos.coleccion.value = producto.coleccion;
     campos.etiqueta.value = producto.etiqueta ?? '';
+    campos.categoriaId.value = producto.categoria ? String(producto.categoria.id) : '';
     campos.descripcion.value = producto.descripcion;
     campos.orden.value = producto.orden ?? '';
     campos.precio.value = producto.precio ?? '';
@@ -433,6 +447,7 @@ function datosDelProducto() {
     nombre: campos.nombre.value.trim(),
     coleccion: campos.coleccion.value,
     etiqueta: campos.etiqueta.value || null,
+    categoriaId: campos.categoriaId.value ? Number(campos.categoriaId.value) : null,
     descripcion: campos.descripcion.value.trim(),
     orden: numero(campos.orden.value),
     precio: numero(campos.precio.value),
@@ -481,6 +496,163 @@ formProducto.addEventListener('submit', async (evento) => {
     boton.disabled = false;
   }
 });
+
+/* ---------- Categorías de aretes ---------- */
+
+/** Categorías tal como las devuelve `GET /api/categorias`, con `totalProductos`. */
+let categorias = [];
+
+async function cargarCategorias() {
+  categorias = await api('/categorias');
+  llenarCategoriasProducto();
+  pintarCategorias();
+}
+
+/** Llena el selector de categoría del diálogo de producto, conservando el valor elegido. */
+function llenarCategoriasProducto(valor = formProducto.elements.categoriaId.value) {
+  const campo = formProducto.elements.categoriaId;
+  campo.replaceChildren(opcion('', 'Sin categoría'), ...categorias.map((c) => opcion(String(c.id), c.nombre)));
+  campo.value = valor;
+}
+
+function pintarCategorias() {
+  const plantilla = $('#plantilla-categoria');
+  rejillaCategorias.replaceChildren(
+    ...categorias.map((categoria) => {
+      const nodo = plantilla.content.firstElementChild.cloneNode(true);
+      $('.categoria__nombre', nodo).textContent = categoria.nombre;
+      $('.categoria__total', nodo).textContent = `${categoria.totalProductos} ${categoria.totalProductos === 1 ? 'arete' : 'aretes'}`;
+      $('[data-accion="editar"]', nodo).addEventListener('click', () => abrirCategoria(categoria));
+      $('[data-accion="borrar"]', nodo).addEventListener('click', () => borrarCategoria(categoria));
+      return nodo;
+    }),
+  );
+  $('#total-categorias').textContent = `(${categorias.length})`;
+  $('#vacio-categorias').hidden = categorias.length > 0;
+}
+
+$('#boton-nueva-categoria').addEventListener('click', () => abrirCategoria(null));
+
+let categoriaEditando = null;
+let slugCategoriaTocado = false;
+
+formCategoria.elements.nombre.addEventListener('input', () => {
+  if (!categoriaEditando && !slugCategoriaTocado) {
+    formCategoria.elements.slug.value = slugificar(formCategoria.elements.nombre.value);
+  }
+});
+formCategoria.elements.slug.addEventListener('input', () => {
+  slugCategoriaTocado = true;
+});
+
+function abrirCategoria(categoria) {
+  categoriaEditando = categoria;
+  slugCategoriaTocado = false;
+  formCategoria.reset();
+  $('#error-categoria').textContent = '';
+  $('#titulo-categoria').textContent = categoria ? `Editar ${categoria.nombre}` : 'Nueva categoría';
+  const campos = formCategoria.elements;
+  campos.slug.disabled = Boolean(categoria);
+  if (categoria) {
+    campos.nombre.value = categoria.nombre;
+    campos.slug.value = categoria.slug;
+    campos.orden.value = categoria.orden ?? '';
+  }
+  dialogoCategoria.showModal();
+  campos.nombre.focus();
+}
+
+for (const boton of dialogoCategoria.querySelectorAll('[data-cerrar]')) {
+  boton.addEventListener('click', () => dialogoCategoria.close());
+}
+
+formCategoria.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const error = $('#error-categoria');
+  error.textContent = '';
+  if (!formCategoria.reportValidity()) return;
+
+  const campos = formCategoria.elements;
+  const datos = {
+    ...(categoriaEditando ? {} : { slug: campos.slug.value.trim() || undefined }),
+    nombre: campos.nombre.value.trim(),
+    orden: campos.orden.value === '' ? null : Number(campos.orden.value),
+  };
+
+  const boton = $('#boton-guardar-categoria');
+  boton.disabled = true;
+  try {
+    categoriaEditando
+      ? await api(`/categorias/${encodeURIComponent(categoriaEditando.slug)}`, { method: 'PATCH', json: datos })
+      : await api('/categorias', { method: 'POST', json: datos });
+    dialogoCategoria.close();
+    avisar(categoriaEditando ? 'Categoría guardada' : 'Categoría creada');
+    await Promise.all([cargarCategorias(), cargarCatalogo()]);
+  } catch (e) {
+    error.textContent = e.message;
+  } finally {
+    boton.disabled = false;
+  }
+});
+
+async function borrarCategoria(categoria) {
+  if (categoria.totalProductos > 0) {
+    avisar(`Primero quítale la categoría a sus ${categoria.totalProductos} producto(s).`);
+    return;
+  }
+  if (!window.confirm(`¿Borrar "${categoria.nombre}"? No se puede deshacer.`)) return;
+  try {
+    await api(`/categorias/${encodeURIComponent(categoria.slug)}`, { method: 'DELETE' });
+    avisar('Categoría borrada');
+    await cargarCategorias();
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
+/* ---------- Pedidos de kits (jabón + vela) ---------- */
+
+let pedidos = [];
+
+async function cargarPedidos() {
+  pedidos = await api('/pedidos');
+  pintarPedidos();
+}
+
+function formatoFecha(fechaIso) {
+  return new Date(fechaIso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function pintarPedidos() {
+  const plantilla = $('#plantilla-pedido');
+  rejillaPedidos.replaceChildren(
+    ...pedidos.map((pedido) => {
+      const nodo = plantilla.content.firstElementChild.cloneNode(true);
+      $('.pedido__cliente', nodo).textContent = pedido.clienteNombre;
+      $('.pedido__fecha', nodo).textContent = formatoFecha(pedido.creadoEn);
+      $('.pedido__contacto', nodo).textContent = pedido.clienteContacto;
+      $('.pedido__jabon', nodo).textContent =
+        `Color ${pedido.jabonColor} · Aroma ${pedido.jabonAroma} · Forma ${pedido.jabonForma}`;
+      $('.pedido__vela', nodo).textContent =
+        `Color ${pedido.velaColor} · Aroma ${pedido.velaAroma} · Topping ${pedido.velaTopping}`;
+      $('[data-accion="borrar"]', nodo).addEventListener('click', () => borrarPedido(pedido));
+      return nodo;
+    }),
+  );
+  $('#total-pedidos').textContent = `(${pedidos.length})`;
+  $('#vacio-pedidos').hidden = pedidos.length > 0;
+}
+
+async function borrarPedido(pedido) {
+  if (!window.confirm(`¿Borrar el pedido de ${pedido.clienteNombre}? Hazlo solo cuando ya lo hayas cotizado.`)) return;
+  try {
+    await api(`/pedidos/${pedido.id}`, { method: 'DELETE' });
+    avisar('Pedido borrado');
+    await cargarPedidos();
+  } catch (e) {
+    avisar(e.message);
+  }
+}
 
 /* ---------- Campos de una foto (subir y editar) ---------- */
 

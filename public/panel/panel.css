@@ -727,3 +727,80 @@ textarea {
 #rejilla-productos {
   grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
 }
+
+/* Tarjetas de categoría */
+.categoria {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+}
+
+.categoria__cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.categoria__nombre {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+/* Tarjetas de pedido */
+.rejilla--pedidos {
+  grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+}
+
+.pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.pedido__cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.pedido__cliente {
+  font-size: 1.05rem;
+}
+
+.pedido__fecha {
+  font-size: 0.8125rem;
+  color: var(--lavanda);
+}
+
+.pedido__contacto {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--lavanda);
+}
+
+.pedido__detalle {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  margin: 0.25rem 0;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  background: var(--fondo);
+}
+
+.pedido__detalle strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.8125rem;
+  color: var(--morado);
+}
+
+.pedido__detalle p {
+  margin: 0;
+}

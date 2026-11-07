@@ -37,6 +37,11 @@ export class Producto {
   @Column({ type: 'simple-enum', enum: COLECCIONES })
   coleccion: Coleccion;
 
+  /** Categoría de aretes (tabla `categorias`), opcional. Sin relación de TypeORM a propósito:
+   * se consulta por aparte, igual que `totalFotos`, para no acoplar los módulos. */
+  @Column({ name: 'categoria_id', type: 'int', unsigned: true, nullable: true })
+  categoriaId: number | null;
+
   @Column({ type: 'varchar', length: 240, default: '' })
   descripcion: string;
 

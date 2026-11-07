@@ -43,6 +43,18 @@ CREATE TABLE IF NOT EXISTS imagenes (
   KEY idx_imagenes_categoria_producto (categoria, producto)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Categorías de aretes, administradas desde el panel (pestaña Categorías).
+CREATE TABLE IF NOT EXISTS categorias (
+  id              INT UNSIGNED   NOT NULL AUTO_INCREMENT,
+  slug            VARCHAR(100)   NOT NULL COMMENT 'No cambia después de crearse',
+  nombre          VARCHAR(100)   NOT NULL,
+  orden           INT            NOT NULL DEFAULT 0,
+  creado_en       DATETIME(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  actualizado_en  DATETIME(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_categorias_slug (slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Productos del catálogo. `slug` es su identificador en el front y en las fotos (imagenes.producto).
 -- Las colecciones y etiquetas son las mismas que usa el front (src/domain/).
 CREATE TABLE IF NOT EXISTS productos (
@@ -50,6 +62,7 @@ CREATE TABLE IF NOT EXISTS productos (
   slug            VARCHAR(100)   NOT NULL COMMENT 'No cambia después de crearse',
   nombre          VARCHAR(100)   NOT NULL,
   coleccion       ENUM('dia-de-muertos', 'mexicanos', 'patrios', 'navidad', 'otros') NOT NULL,
+  categoria_id    INT UNSIGNED   NULL     COMMENT 'Categoría de aretes (opcional, tabla categorias)',
   descripcion     VARCHAR(240)   NOT NULL DEFAULT '',
   etiqueta        ENUM('Nuevo', 'Temporada', 'Más vendido') NULL,
   precio          DECIMAL(8, 2)  NULL     COMMENT 'Hoy el sitio usa el precio general de sitio.ts',
@@ -59,7 +72,10 @@ CREATE TABLE IF NOT EXISTS productos (
   creado_en       DATETIME(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   actualizado_en  DATETIME(6)    NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
-  UNIQUE KEY uq_productos_slug (slug)
+  UNIQUE KEY uq_productos_slug (slug),
+  KEY idx_productos_categoria (categoria_id),
+  CONSTRAINT fk_productos_categoria FOREIGN KEY (categoria_id)
+    REFERENCES categorias (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Colores en que se vende cada producto. `color_id` es lo que guardan las fotos en imagenes.color.
@@ -74,4 +90,21 @@ CREATE TABLE IF NOT EXISTS producto_colores (
   UNIQUE KEY uq_producto_colores (producto_id, color_id),
   CONSTRAINT fk_producto_colores_producto FOREIGN KEY (producto_id)
     REFERENCES productos (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pedidos de kits (jabón + vela) que llegan desde el front. Los cotiza y los hace el dueño a mano
+-- (pestaña Pedidos del panel); por eso no se validan existencias ni precios aquí.
+CREATE TABLE IF NOT EXISTS pedidos_kits (
+  id                INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  cliente_nombre    VARCHAR(100)  NOT NULL,
+  cliente_contacto  VARCHAR(150)  NOT NULL COMMENT 'Correo o teléfono de quien pidió',
+  jabon_color       VARCHAR(60)   NOT NULL,
+  jabon_aroma       VARCHAR(60)   NOT NULL,
+  jabon_forma       VARCHAR(60)   NOT NULL,
+  vela_color        VARCHAR(60)   NOT NULL,
+  vela_aroma        VARCHAR(60)   NOT NULL,
+  vela_topping      VARCHAR(60)   NOT NULL,
+  creado_en         DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY idx_pedidos_kits_creado_en (creado_en)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

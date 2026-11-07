@@ -102,6 +102,8 @@ echo "Contraseña de la base de datos: ${DB_PASS}"   # cópiala para el paso 7
 sudo mariadb < database/03_productos_iniciales.sql
 ```
 
+`01` ya crea las tablas `categorias` y `pedidos_kits` (son de una instalación nueva); si vienes de una base anterior a estas, revisa primero *Actualizar la API* más abajo.
+
 Revisa los permisos:
 
 ```bash
@@ -116,6 +118,8 @@ GRANT SELECT, INSERT, UPDATE ON `aalcuadrado`.`usuarios` TO `aalcuadrado_api`@`l
 GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`imagenes` TO `aalcuadrado_api`@`localhost`
 GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`productos` TO `aalcuadrado_api`@`localhost`
 GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`producto_colores` TO `aalcuadrado_api`@`localhost`
+GRANT SELECT, INSERT, UPDATE, DELETE ON `aalcuadrado`.`categorias` TO `aalcuadrado_api`@`localhost`
+GRANT SELECT, INSERT, DELETE ON `aalcuadrado`.`pedidos_kits` TO `aalcuadrado_api`@`localhost`
 ```
 
 El usuario de la API **no** puede crear, alterar ni borrar tablas, ni ver otras bases, ni conectarse desde fuera de la Raspberry.
@@ -269,6 +273,10 @@ Todas las rutas de `/api` piden `Authorization: Bearer <token>`, salvo el login.
 | `POST` | `/api/productos` | Crea un producto: `nombre`, `coleccion` y, opcionales, `slug`, `descripcion`, `etiqueta`, `precio`, `disponible`, `destacado`, `orden`, `colores`. |
 | `PATCH` | `/api/productos/:slug` | Edita un producto (todo menos el slug). `colores` reemplaza la lista. |
 | `DELETE` | `/api/productos/:slug` | Borra un producto sin fotos (con fotos responde 409). |
+| `GET` | `/api/categorias` | Categorías de aretes, con `totalProductos`. |
+| `POST` | `/api/categorias` | Crea una categoría: `nombre` y, opcionales, `slug`, `orden`. |
+| `PATCH` | `/api/categorias/:slug` | Edita `nombre` y/o `orden`. |
+| `DELETE` | `/api/categorias/:slug` | Borra una categoría sin productos (con productos responde 409). |
 | `GET` | `/api/imagenes?categoria=&producto=` | Lista de fotos (filtros opcionales), por `orden`. Cada una trae su `url`. |
 | `GET` | `/api/imagenes/:id` | Una foto. |
 | `POST` | `/api/imagenes` | `multipart/form-data`: `archivos` (1 a 10), `categoria` (`productos` o `galeria`) y, opcionales, `producto`, `color`, `alt`, `orden`. |
@@ -278,8 +286,11 @@ Todas las rutas de `/api` piden `Authorization: Bearer <token>`, salvo el login.
 | `POST` | `/api/publicacion` | Llama al Deploy Hook del front (`DEPLOY_HOOK_URL`) para volver a publicar el sitio. |
 | `GET` | `/api/disenos` | **Pública.** Si la generación con IA está disponible y cuántas imágenes quedan hoy. |
 | `POST` | `/api/disenos` | **Pública.** `{ "texto": "tu idea" }` → imagen de unos aretes generada con OpenAI (`OPENAI_API_KEY`). |
+| `POST` | `/api/pedidos` | **Pública.** Pedido de un kit (jabón + vela): nombre, contacto (correo o teléfono) y los datos del jabón y la vela. Máximo 5 por minuto por IP. |
+| `GET` | `/api/pedidos` | Pedidos de kits, del más reciente al más viejo (para cotizarlos a mano). |
+| `DELETE` | `/api/pedidos/:id` | Borra un pedido (cuando ya se cotizó). |
 | `GET` | `/uploads/<categoria>/<archivo>` | El archivo de la foto. Público, para que `<img src>` funcione. |
-| `GET` | `/panel/` | El panel, con dos pestañas: **Fotos** (subir, editar, borrar) y **Productos** (crear, editar, borrar). La página es pública, pero todo lo que hace pide el token. |
+| `GET` | `/panel/` | El panel: **Fotos**, **Productos**, **Categorías**, **Así se ven** y **Pedidos**. La página es pública, pero todo lo que hace pide el token. |
 
 `producto` y `color` son el *slug* del producto y el *id* del color tal como los usa el front (`nochebuena`, `rojo`, `rosa-mexicano`).
 
@@ -302,6 +313,18 @@ sudo systemctl restart aalcuadrado-api
 ```
 
 Si una versión nueva cambia las tablas, trae su script en `database/` y se corre con `sudo mariadb < database/<script>.sql` antes de reiniciar.
+
+**Para traer categorías de aretes y pedidos de kits a una base que ya existe:**
+
+```bash
+cd /opt/aalcuadrado/back-aalcuadrado
+sudo mariadb < database/04_categorias.sql      # tabla categorias y productos.categoria_id
+sudo mariadb < database/05_pedidos_kits.sql    # tabla pedidos_kits
+sed "s/CAMBIA_ESTA_CONTRASENA/no-se-usa/g" database/02_crear_usuario_bd.sql | sudo mariadb   # permisos nuevos
+sudo systemctl restart aalcuadrado-api
+```
+
+Los dos scripts se pueden repetir sin dañar lo que ya existe.
 
 **Si tu base es anterior al módulo de productos**, corre esto una vez antes de reiniciar (los tres scripts se pueden repetir sin dañar lo que ya existe; `02` no cambia la contraseña de un usuario que ya existe):
 
