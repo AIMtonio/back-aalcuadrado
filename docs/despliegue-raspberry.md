@@ -318,18 +318,19 @@ sudo systemctl restart aalcuadrado-api
 
 Si una versión nueva cambia las tablas, trae su script en `database/` y se corre con `sudo mariadb < database/<script>.sql` antes de reiniciar.
 
-**Para traer categorías de aretes, pedidos de kits y los colores, aromas y fotos de kits a una base que ya existe:**
+**Para traer categorías de aretes, pedidos de kits, los colores, aromas y fotos de kits y las velas a una base que ya existe:**
 
 ```bash
 cd /opt/aalcuadrado/back-aalcuadrado
 sudo mariadb < database/04_categorias.sql      # tabla categorias y productos.categoria_id
 sudo mariadb < database/05_pedidos_kits.sql    # tabla pedidos_kits
 sudo mariadb < database/06_kits_opciones.sql   # kit_colores, kit_aromas y la categoría de fotos "kits"
+sudo mariadb < database/07_velas.sql           # velas_presentaciones, pedidos_velas y las fotos "velas-*"
 sed "s/CAMBIA_ESTA_CONTRASENA/no-se-usa/g" database/02_crear_usuario_bd.sql | sudo mariadb   # permisos nuevos
 sudo systemctl restart aalcuadrado-api
 ```
 
-Los scripts se pueden repetir sin dañar lo que ya existe. `06` carga los colores y aromas que el sitio tenía fijos (si ya existe uno con ese nombre, no lo toca).
+Los scripts se pueden repetir sin dañar lo que ya existe. `06` carga los colores y aromas que el sitio tenía fijos y `07` las presentaciones de velas (si ya existe una con ese nombre, no la toca). Los gramos quedan pendientes: ponlos en la pestaña **Velas** del panel o con `UPDATE velas_presentaciones SET gramos = 180 WHERE tipo = 'recipiente' AND nombre = 'Mediana';`.
 
 **Si tu base es anterior al módulo de productos**, corre esto una vez antes de reiniciar (los tres scripts se pueden repetir sin dañar lo que ya existe; `02` no cambia la contraseña de un usuario que ya existe):
 

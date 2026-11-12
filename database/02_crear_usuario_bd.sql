@@ -43,6 +43,14 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'127.0.0.1';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'127.0.0.1';
+
+-- velas_presentaciones: lectura y escritura completas (pestaña Velas del panel).
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.velas_presentaciones TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.velas_presentaciones TO 'aalcuadrado_api'@'127.0.0.1';
+
+-- pedidos_velas: igual que pedidos_kits. Sin UPDATE.
+GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_velas TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_velas TO 'aalcuadrado_api'@'127.0.0.1';
 FLUSH PRIVILEGES;
 
 -- Para revisar los permisos:

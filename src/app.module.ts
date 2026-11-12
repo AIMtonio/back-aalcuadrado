@@ -12,6 +12,7 @@ import { PedidosModule } from './pedidos/pedidos.module.js';
 import { ProductosModule } from './productos/productos.module.js';
 import { PublicacionModule } from './publicacion/publicacion.module.js';
 import { UsuariosModule } from './usuarios/usuarios.module.js';
+import { VelasModule } from './velas/velas.module.js';
 
 /** Módulos con endpoints. Las pruebas e2e los montan sobre otra base de datos. */
 export const MODULOS_DE_NEGOCIO = [
@@ -22,6 +23,7 @@ export const MODULOS_DE_NEGOCIO = [
   ProductosModule,
   PedidosModule,
   KitsModule,
+  VelasModule,
   PublicacionModule,
   DisenosModule,
 ];

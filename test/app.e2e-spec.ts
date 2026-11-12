@@ -797,6 +797,249 @@ describe('API (e2e)', () => {
     expect(kits.body).toHaveLength(1);
   });
 
+  it('administra las presentaciones de velas y no deja marmolear las de jícara', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    await request(http).get('/api/velas/presentaciones').expect(401);
+
+    const crear = (datos: Record<string, unknown>) =>
+      request(http).post('/api/velas/presentaciones').set(auth).send(datos);
+
+    const mediana = await crear({
+      tipo: 'recipiente',
+      nombre: ' Mediana ',
+      marmoleable: true,
+      orden: 1,
+    }).expect(201);
+    expect(mediana.body).toMatchObject({
+      tipo: 'recipiente',
+      nombre: 'Mediana',
+      gramos: null,
+      marmoleable: true,
+      disponible: true,
+    });
+    await crear({
+      tipo: 'recipiente',
+      nombre: 'Pequeña',
+      marmoleable: true,
+    }).expect(201);
+    await crear({ tipo: 'molde', nombre: 'Cupcake' }).expect(201);
+    const jicara = await crear({ tipo: 'jicara', nombre: 'Mediana' }).expect(
+      201,
+    );
+
+    // El mismo nombre en otro tipo sí se puede; en el mismo tipo no (sin importar mayúsculas).
+    await crear({ tipo: 'recipiente', nombre: 'MEDIANA' }).expect(409);
+    await crear({ tipo: 'vaso', nombre: 'Chica' }).expect(400);
+    const marmolJicara = await crear({
+      tipo: 'jicara',
+      nombre: 'Grande',
+      marmoleable: true,
+    }).expect(400);
+    expect(marmolJicara.body.message).toMatch(/no se apreciaría/);
+    await request(http)
+      .patch(`/api/velas/presentaciones/${jicara.body.id}`)
+      .set(auth)
+      .send({ marmoleable: true })
+      .expect(400);
+
+    // Los gramos se ponen después; null los deja pendientes otra vez.
+    const conGramos = await request(http)
+      .patch(`/api/velas/presentaciones/${mediana.body.id}`)
+      .set(auth)
+      .send({ gramos: 180 })
+      .expect(200);
+    expect(conGramos.body.gramos).toBe(180);
+    await request(http)
+      .patch(`/api/velas/presentaciones/${mediana.body.id}`)
+      .set(auth)
+      .send({ gramos: 2.5 })
+      .expect(400);
+    await request(http)
+      .patch(`/api/velas/presentaciones/${mediana.body.id}`)
+      .set(auth)
+      .send({ tipo: 'molde' })
+      .expect(400);
+
+    const lista = await request(http)
+      .get('/api/velas/presentaciones')
+      .set(auth)
+      .expect(200);
+    expect(
+      lista.body.map(
+        (p: { tipo: string; nombre: string }) => `${p.tipo}:${p.nombre}`,
+      ),
+    ).toEqual([
+      'recipiente:Pequeña',
+      'recipiente:Mediana',
+      'molde:Cupcake',
+      'jicara:Mediana',
+    ]);
+  });
+
+  it('crea pedidos de velas sin token con opciones disponibles, y solo el panel los lista y los borra', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    // Colores y aromas: los de los kits marcados para la vela y disponibles.
+    for (const color of [
+      { nombre: 'Azul cielo', hex: '#87CEEB' },
+      { nombre: 'Blanco', hex: '#FFFFFF' },
+      { nombre: 'Verde jabón', hex: '#00AA00', enVela: false },
+    ]) {
+      await request(http)
+        .post('/api/kits/colores')
+        .set(auth)
+        .send(color)
+        .expect(201);
+    }
+    await request(http)
+      .post('/api/kits/aromas')
+      .set(auth)
+      .send({ nombre: 'Vainilla' })
+      .expect(201);
+
+    const base = {
+      clienteNombre: 'Lucía',
+      clienteContacto: 'lucia@example.com',
+      tipo: 'recipiente',
+      presentacion: 'mediana',
+      color: 'azul cielo',
+      aroma: 'Vainilla',
+      topping: 'Sin topping',
+    };
+    // Cada pedido desde otra IP: el límite de 5 por minuto es por visitante.
+    let visitante = 0;
+    const pedir = (cambios: Record<string, unknown> = {}) =>
+      request(http)
+        .post('/api/velas/pedidos')
+        .set('CF-Connecting-IP', `203.0.113.${++visitante}`)
+        .send({ ...base, ...cambios });
+
+    const simple = await pedir().expect(201);
+    expect(simple.body).toMatchObject({
+      tipo: 'recipiente',
+      presentacion: 'Mediana',
+      gramos: 180,
+      color: 'Azul cielo',
+      aroma: 'Vainilla',
+      marmoleado: false,
+      colorMarmoleado: null,
+      cantidad: 1,
+      notas: null,
+    });
+
+    const marmol = await pedir({
+      marmoleado: true,
+      colorMarmoleado: 'Blanco',
+      cantidad: 3,
+      notas: '  Para un regalo  ',
+    }).expect(201);
+    expect(marmol.body).toMatchObject({
+      marmoleado: true,
+      colorMarmoleado: 'Blanco',
+      cantidad: 3,
+      notas: 'Para un regalo',
+    });
+
+    // Sin el segundo color, con el mismo color, o en una presentación que no se marmolea.
+    await pedir({ marmoleado: true }).expect(400);
+    await pedir({ marmoleado: true, colorMarmoleado: 'Azul cielo' }).expect(
+      400,
+    );
+    const cupcake = await pedir({
+      tipo: 'molde',
+      presentacion: 'Cupcake',
+      marmoleado: true,
+      colorMarmoleado: 'Blanco',
+    }).expect(400);
+    expect(cupcake.body.message).toMatch(/no se hace marmoleada/);
+    // Sin marmoleado, el segundo color se ignora.
+    const ignorado = await pedir({
+      tipo: 'molde',
+      presentacion: 'Cupcake',
+      colorMarmoleado: 'Blanco',
+    }).expect(201);
+    expect(ignorado.body.colorMarmoleado).toBeNull();
+
+    // Presentaciones de otro tipo, colores solo de jabón y opciones que no existen.
+    const otroTipo = await pedir({
+      tipo: 'molde',
+      presentacion: 'Mediana',
+    }).expect(400);
+    expect(otroTipo.body.message).toMatch(/Elige: Cupcake/);
+    await pedir({ color: 'Verde jabón' }).expect(400);
+    await pedir({ aroma: 'Café' }).expect(400);
+    await pedir({ cantidad: 0 }).expect(400);
+    await pedir({ cantidad: 21 }).expect(400);
+    await pedir({ clienteNombre: '   ' }).expect(400);
+    await pedir({ clienteContacto: 'no sé' }).expect(400);
+    await pedir({ precio: 1 }).expect(400);
+
+    // Lo que se desactiva en el panel deja de aceptarse.
+    const presentaciones = await request(http)
+      .get('/api/velas/presentaciones')
+      .set(auth)
+      .expect(200);
+    const pequena = presentaciones.body.find(
+      (p: { nombre: string }) => p.nombre === 'Pequeña',
+    );
+    await request(http)
+      .patch(`/api/velas/presentaciones/${pequena.id}`)
+      .set(auth)
+      .send({ disponible: false })
+      .expect(200);
+    await pedir({ presentacion: 'Pequeña' }).expect(400);
+
+    await request(http).get('/api/velas/pedidos').expect(401);
+    const lista = await request(http)
+      .get('/api/velas/pedidos')
+      .set(auth)
+      .expect(200);
+    expect(lista.body).toHaveLength(3);
+    expect(lista.body[0].id).toBe(ignorado.body.id);
+
+    await request(http)
+      .delete(`/api/velas/pedidos/${simple.body.id}`)
+      .expect(401);
+    await request(http)
+      .delete(`/api/velas/pedidos/${simple.body.id}`)
+      .set(auth)
+      .expect(204);
+    await request(http)
+      .delete(`/api/velas/pedidos/${simple.body.id}`)
+      .set(auth)
+      .expect(404);
+  });
+
+  it('guarda las fotos de cada tipo de vela en su carpeta', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    const res = await request(http)
+      .post('/api/imagenes')
+      .set(auth)
+      .field('categoria', 'velas-jicara')
+      .attach('archivos', PNG, {
+        filename: 'jicara.png',
+        contentType: 'image/png',
+      })
+      .expect(201);
+    expect(res.body[0].url).toMatch(/\/uploads\/velas-jicara\//);
+    expect(existsSync(join(carpeta, 'velas-jicara', res.body[0].archivo))).toBe(
+      true,
+    );
+    await request(http)
+      .patch(`/api/imagenes/${res.body[0].id}`)
+      .set(auth)
+      .send({ categoria: 'velas-molde' })
+      .expect(200);
+    expect(existsSync(join(carpeta, 'velas-molde', res.body[0].archivo))).toBe(
+      true,
+    );
+    await request(http)
+      .post('/api/imagenes')
+      .set(auth)
+      .field('categoria', 'velas')
+      .attach('archivos', PNG, { filename: 'x.png', contentType: 'image/png' })
+      .expect(400);
+  });
+
   it('sirve el panel', async () => {
     const res = await request(http).get('/panel/').expect(200);
     expect(res.text).toContain('Panel aalcuadrado');
