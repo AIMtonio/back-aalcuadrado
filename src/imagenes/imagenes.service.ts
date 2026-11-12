@@ -155,7 +155,7 @@ export class ImagenesService implements OnModuleInit {
 
   /**
    * Una foto de producto necesita un producto que exista y, si trae color, que sea
-   * uno de los colores de ese producto. En la galería y en los kits no aplican: se limpian.
+   * uno de los colores de ese producto. En las demás categorías (galería, kits, velas) no aplican: se limpian.
    */
   private async asignacionValida(
     datos: Pick<Imagen, 'categoria' | 'producto' | 'color'>,

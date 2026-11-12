@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 -- Fotos subidas desde el panel. El archivo vive en UPLOADS_DIR/<categoria>/<archivo>.
 CREATE TABLE IF NOT EXISTS imagenes (
   id               INT UNSIGNED   NOT NULL AUTO_INCREMENT,
-  categoria        ENUM('productos', 'galeria', 'kits') NOT NULL,
+  categoria        ENUM('productos', 'galeria', 'kits', 'velas-recipiente', 'velas-molde', 'velas-jicara') NOT NULL,
   archivo          VARCHAR(120)   NOT NULL COMMENT 'Nombre en disco, lo genera la API',
   nombre_original  VARCHAR(255)   NOT NULL,
   mime             VARCHAR(20)    NOT NULL,
@@ -136,4 +136,42 @@ CREATE TABLE IF NOT EXISTS kit_aromas (
   actualizado_en  DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
   UNIQUE KEY uq_kit_aromas_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Velas individuales personalizadas (pestaña Velas del panel). Cada tipo tiene sus
+-- presentaciones: tamaños (recipiente, jícara) o moldes (molde). `gramos` queda en NULL
+-- hasta que se defina. En jícara el marmoleado no se ofrece (no se apreciaría).
+CREATE TABLE IF NOT EXISTS velas_presentaciones (
+  id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  tipo            ENUM('recipiente', 'molde', 'jicara') NOT NULL,
+  nombre          VARCHAR(40)   NOT NULL COMMENT 'Pequeña, Mediana, Grande o el molde (Cupcake)',
+  gramos          INT UNSIGNED  NULL     COMMENT 'Gramos de cera; NULL = pendiente',
+  marmoleable     TINYINT(1)    NOT NULL DEFAULT 0,
+  disponible      TINYINT(1)    NOT NULL DEFAULT 1,
+  orden           INT           NOT NULL DEFAULT 0,
+  creado_en       DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  actualizado_en  DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_velas_presentaciones_tipo_nombre (tipo, nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Pedidos de velas que llegan desde el front. Guardan los nombres elegidos (no ids) y los
+-- gramos que tenía la presentación. Los cotiza el dueño a mano (pestaña Pedidos del panel).
+CREATE TABLE IF NOT EXISTS pedidos_velas (
+  id                INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  cliente_nombre    VARCHAR(100)  NOT NULL,
+  cliente_contacto  VARCHAR(150)  NOT NULL COMMENT 'Correo o teléfono de quien pidió',
+  tipo              ENUM('recipiente', 'molde', 'jicara') NOT NULL,
+  presentacion      VARCHAR(40)   NOT NULL,
+  gramos            INT UNSIGNED  NULL,
+  color             VARCHAR(60)   NOT NULL,
+  aroma             VARCHAR(60)   NOT NULL,
+  topping           VARCHAR(60)   NOT NULL,
+  marmoleado        TINYINT(1)    NOT NULL DEFAULT 0,
+  color_marmoleado  VARCHAR(60)   NULL,
+  cantidad          INT UNSIGNED  NOT NULL DEFAULT 1,
+  notas             VARCHAR(500)  NULL,
+  creado_en         DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY idx_pedidos_velas_creado_en (creado_en)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

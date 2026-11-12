@@ -36,6 +36,7 @@
           <button type="button" class="pestana" data-pestana="categorias">Categorías</button>
           <button type="button" class="pestana" data-pestana="galeria">Así se ven</button>
           <button type="button" class="pestana" data-pestana="kits">Kits</button>
+          <button type="button" class="pestana" data-pestana="velas">Velas</button>
           <button type="button" class="pestana" data-pestana="pedidos">Pedidos</button>
         </nav>
         <div class="publicar" id="publicar" hidden>
@@ -76,6 +77,9 @@
                 <option value="productos">Productos</option>
                 <option value="galeria">Galería ("Así se ven")</option>
                 <option value="kits">Kits</option>
+                <option value="velas-recipiente">Velas en recipiente</option>
+                <option value="velas-molde">Velas de molde</option>
+                <option value="velas-jicara">Velas en jícara</option>
                 <option value="pendientes">No se ven en el sitio</option>
               </select>
             </label>
@@ -186,6 +190,80 @@
         </section>
       </main>
 
+      <main class="contenido" id="pestana-velas" hidden>
+        <section aria-labelledby="titulo-presentaciones">
+          <div class="barra">
+            <h2 id="titulo-presentaciones">Tamaños y moldes <span id="total-presentaciones" class="contador"></span></h2>
+            <button type="button" class="boton" id="boton-nueva-presentacion">Nueva presentación</button>
+          </div>
+          <p class="nota">
+            Lo que se puede pedir de cada tipo de vela. Pon los gramos cuando los tengas y desmarca "Disponible"
+            si dejas de hacer alguna. Los colores y aromas son los de la pestaña Kits marcados para la vela.
+          </p>
+          <p class="vacio" id="vacio-presentaciones" hidden>
+            Todavía no hay presentaciones: corre database/07_velas.sql o agrégalas aquí.
+          </p>
+          <ul class="rejilla rejilla--opciones" id="rejilla-presentaciones"></ul>
+        </section>
+
+        <section class="tarjeta" aria-labelledby="titulo-velas-recipiente">
+          <div class="barra">
+            <h2 id="titulo-velas-recipiente">Fotos: en recipiente <span id="total-velas-recipiente" class="contador"></span></h2>
+          </div>
+          <p class="nota">Velas en recipiente, en sus tamaños; si tienes marmoleadas, súbelas también. Salen en el sitio en este orden; usa las flechas para cambiarlo.</p>
+          <form id="form-velas-recipiente" class="subir">
+            <label class="zona">
+              <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
+              <span class="zona__texto">Arrastra tus fotos aquí o <u>elígelas</u></span>
+              <span class="zona__ayuda">JPG, PNG, WebP o AVIF · hasta 10 por vez</span>
+            </label>
+            <ul class="previas" id="previas-velas-recipiente"></ul>
+            <p class="error" id="error-velas-recipiente" role="alert"></p>
+            <button type="submit" class="boton" id="boton-subir-velas-recipiente">Subir</button>
+          </form>
+          <p class="vacio" id="vacio-velas-recipiente" hidden>Todavía no hay fotos de este tipo.</p>
+          <ol class="rejilla" id="rejilla-velas-recipiente"></ol>
+        </section>
+
+        <section class="tarjeta" aria-labelledby="titulo-velas-molde">
+          <div class="barra">
+            <h2 id="titulo-velas-molde">Fotos: de molde <span id="total-velas-molde" class="contador"></span></h2>
+          </div>
+          <p class="nota">Velas de molde (por ahora, tipo cupcake). Salen en el sitio en este orden; usa las flechas para cambiarlo.</p>
+          <form id="form-velas-molde" class="subir">
+            <label class="zona">
+              <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
+              <span class="zona__texto">Arrastra tus fotos aquí o <u>elígelas</u></span>
+              <span class="zona__ayuda">JPG, PNG, WebP o AVIF · hasta 10 por vez</span>
+            </label>
+            <ul class="previas" id="previas-velas-molde"></ul>
+            <p class="error" id="error-velas-molde" role="alert"></p>
+            <button type="submit" class="boton" id="boton-subir-velas-molde">Subir</button>
+          </form>
+          <p class="vacio" id="vacio-velas-molde" hidden>Todavía no hay fotos de este tipo.</p>
+          <ol class="rejilla" id="rejilla-velas-molde"></ol>
+        </section>
+
+        <section class="tarjeta" aria-labelledby="titulo-velas-jicara">
+          <div class="barra">
+            <h2 id="titulo-velas-jicara">Fotos: en jícara <span id="total-velas-jicara" class="contador"></span></h2>
+          </div>
+          <p class="nota">Velas en jícara, en sus tamaños. Salen en el sitio en este orden; usa las flechas para cambiarlo.</p>
+          <form id="form-velas-jicara" class="subir">
+            <label class="zona">
+              <input type="file" name="archivos" accept="image/jpeg,image/png,image/webp,image/avif" multiple required />
+              <span class="zona__texto">Arrastra tus fotos aquí o <u>elígelas</u></span>
+              <span class="zona__ayuda">JPG, PNG, WebP o AVIF · hasta 10 por vez</span>
+            </label>
+            <ul class="previas" id="previas-velas-jicara"></ul>
+            <p class="error" id="error-velas-jicara" role="alert"></p>
+            <button type="submit" class="boton" id="boton-subir-velas-jicara">Subir</button>
+          </form>
+          <p class="vacio" id="vacio-velas-jicara" hidden>Todavía no hay fotos de este tipo.</p>
+          <ol class="rejilla" id="rejilla-velas-jicara"></ol>
+        </section>
+      </main>
+
       <main class="contenido" id="pestana-pedidos" hidden>
         <section aria-labelledby="titulo-pedidos">
           <div class="barra">
@@ -198,6 +276,15 @@
           <p class="vacio" id="vacio-pedidos" hidden>Todavía no hay pedidos.</p>
           <ul class="rejilla rejilla--pedidos" id="rejilla-pedidos"></ul>
         </section>
+
+        <section aria-labelledby="titulo-pedidos-velas">
+          <div class="barra">
+            <h2 id="titulo-pedidos-velas">Pedidos de velas <span id="total-pedidos-velas" class="contador"></span></h2>
+          </div>
+          <p class="nota">Velas personalizadas pedidas desde el sitio. Cotízalas a mano y bórralas cuando termines.</p>
+          <p class="vacio" id="vacio-pedidos-velas" hidden>Todavía no hay pedidos de velas.</p>
+          <ul class="rejilla rejilla--pedidos" id="rejilla-pedidos-velas"></ul>
+        </section>
       </main>
     </div>
 
@@ -209,6 +296,9 @@
           <option value="productos">Producto</option>
           <option value="galeria">Galería ("Así se ven")</option>
           <option value="kits">Kits (jabón y vela)</option>
+          <option value="velas-recipiente">Velas en recipiente</option>
+          <option value="velas-molde">Velas de molde</option>
+          <option value="velas-jicara">Velas en jícara</option>
         </select>
       </label>
       <label data-solo-productos>
@@ -331,6 +421,73 @@
         </div>
       </li>
     </template>
+
+    <template id="plantilla-pedido-vela">
+      <li class="pedido tarjeta">
+        <div class="pedido__cabeza">
+          <strong class="pedido__cliente"></strong>
+          <span class="pedido__fecha"></span>
+        </div>
+        <p class="pedido__contacto"></p>
+        <div class="pedido__detalle">
+          <div>
+            <strong class="pedido__titulo"></strong>
+            <p class="pedido__vela"></p>
+          </div>
+          <div class="pedido__notas" hidden>
+            <strong>Notas</strong>
+            <p></p>
+          </div>
+        </div>
+        <div class="foto__acciones">
+          <button type="button" class="boton boton--chico boton--peligro" data-accion="borrar">Ya la coticé: borrar</button>
+        </div>
+      </li>
+    </template>
+
+    <dialog id="dialogo-presentacion" class="dialogo tarjeta" aria-labelledby="titulo-presentacion">
+      <form id="form-presentacion" novalidate>
+        <div class="dialogo__encabezado">
+          <h2 id="titulo-presentacion">Nueva presentación</h2>
+          <button type="button" class="enlace" data-cerrar aria-label="Cerrar">✕</button>
+        </div>
+        <div class="campos">
+          <label>
+            <span>Tipo <small>(no cambia después)</small></span>
+            <select name="tipo" required>
+              <option value="recipiente">En recipiente</option>
+              <option value="molde">De molde</option>
+              <option value="jicara">En jícara</option>
+            </select>
+          </label>
+          <label>
+            <span>Nombre <small>(tamaño o molde)</small></span>
+            <input name="nombre" required maxlength="40" placeholder="Mediana" />
+          </label>
+          <label>
+            <span>Gramos <small>(vacío = pendiente)</small></span>
+            <input name="gramos" type="number" min="1" step="1" />
+          </label>
+          <label>
+            <span>Orden <small>(opcional; el más bajo sale primero)</small></span>
+            <input name="orden" type="number" step="1" />
+          </label>
+          <label class="casilla campos__ancho">
+            <input type="checkbox" name="marmoleable" />
+            <span>Se puede pedir marmoleada <small id="nota-marmoleable"></small></span>
+          </label>
+          <label class="casilla campos__ancho">
+            <input type="checkbox" name="disponible" checked />
+            Disponible <small>(si no, no sale en el sitio ni se puede pedir)</small>
+          </label>
+        </div>
+        <p class="error" id="error-presentacion" role="alert"></p>
+        <div class="dialogo__acciones">
+          <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
+          <button type="submit" class="boton" id="boton-guardar-presentacion">Guardar</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="dialogo-producto" class="dialogo tarjeta" aria-labelledby="titulo-producto">
       <form id="form-producto" novalidate>

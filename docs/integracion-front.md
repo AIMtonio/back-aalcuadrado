@@ -144,7 +144,7 @@ Categorías de aretes administradas desde el panel (pestaña Categorías), orden
 
 ### `GET /api/imagenes`
 
-Filtros opcionales: `categoria` (`productos`, `galeria` o `kits`) y `producto` (slug). Sale ordenada por `orden` y luego por `id`.
+Filtros opcionales: `categoria` (`productos`, `galeria`, `kits`, `velas-recipiente`, `velas-molde` o `velas-jicara`) y `producto` (slug). Sale ordenada por `orden` y luego por `id`.
 
 ```json
 [
@@ -171,6 +171,7 @@ Filtros opcionales: `categoria` (`productos`, `galeria` o `kits`) y `producto` (
 | `categoria: "productos"` | Fotos de un producto. |
 | `categoria: "galeria"` | Sección "Así se ven". |
 | `categoria: "kits"` | Sección "Así quedan" de la página de kits. |
+| `categoria: "velas-recipiente"`, `"velas-molde"`, `"velas-jicara"` | Cómo se ve cada tipo de vela individual (ver [Velas personalizadas](#velas-personalizadas)). |
 | `producto` | Slug de un producto que existe en la API. |
 | `color` | `id` de uno de los colores de ese producto, o `null`. |
 | `alt` | Texto alternativo. Si es `null`, el front arma uno ("Aretes Nochebuena, en color rojo"). |
@@ -198,7 +199,7 @@ Al subir varias fotos juntas, reciben `orden`, `orden + 1`, `orden + 2`… en el
 Reglas de las fotos (al subir y al editar):
 
 - Una foto de `productos` **debe** tener un `producto` que exista, y su `color` (si lo trae) debe ser de ese producto. Si no, `400`.
-- En `galeria`, `producto` y `color` se guardan vacíos aunque se manden.
+- En las demás categorías (`galeria`, `kits`, `velas-*`), `producto` y `color` se guardan vacíos aunque se manden.
 - `alt` no puede ser una URL.
 
 ### Errores
@@ -355,6 +356,94 @@ En el front:
 - **"Arma tu kit"** ofrece, para cada lista (colores del jabón, aromas de la vela…), las opciones disponibles del panel marcadas para esa pieza. Si una lista queda vacía (o la API no tiene el módulo), usa la de `sitio.kits` y avisa al compilar. Las formas del jabón y los toppings de la vela siguen fijos en `sitio.kits`, porque cada uno tiene su dibujo en la vista previa.
 - **"Así quedan"**, en la página de kits, muestra las fotos de kits en el orden del panel. Sin fotos, la sección no sale.
 - Los pedidos guardan el **nombre** del color y del aroma: renombrar o borrar uno en el panel no cambia los pedidos que ya llegaron.
+
+## Velas personalizadas
+
+Velas individuales que quien visita el sitio arma a su gusto. Como los kits, el dueño las cotiza y las hace a mano: no hay precios ni inventario de este lado. Todo se administra en la pestaña **Velas** del panel (tamaños, moldes y fotos) y los pedidos salen en la pestaña **Pedidos**.
+
+### Las reglas
+
+| Tipo (`tipo`) | Nombre en el sitio | Presentaciones iniciales | ¿Marmoleada? |
+| --- | --- | --- | --- |
+| `recipiente` | En recipiente | Pequeña, Mediana, Grande | Opcional, en las presentaciones con `marmoleable: true` (las tres) |
+| `molde` | De molde | Cupcake (por ahora, la única) | No (`marmoleable: false`; el dueño lo puede activar) |
+| `jicara` | En jícara | Pequeña, Mediana, Grande | **Nunca**: no se apreciaría. La API no deja marcarla como marmoleable |
+
+- Cada vela lleva **tipo**, **presentación** (tamaño o molde), **color**, **aroma** y **topping**; opcionalmente **marmoleado** (con un segundo color), **cantidad** (1 a 20) y **notas**.
+- **Colores y aromas** son los mismos de los kits (pestaña Kits), los marcados para la **vela** (`enVela: true`) y **disponibles**. El sincronizador ya los descarga en `catalogo-api.json` → `kits.colores` / `kits.aromas`.
+- **Toppings**: igual que en "Arma tu kit", la lista vive en el front (`sitio.kits.toppings`, incluido "Sin topping"); la API guarda el texto tal cual.
+- **Gramos**: cada presentación tiene `gramos`, que puede ser `null` mientras el dueño no lo defina. El front debe mostrarlos solo si vienen (por ejemplo "Mediana · 180 g").
+- Una presentación con `disponible: false` no debe salir en el sitio; la API rechaza pedidos de ella.
+
+### `GET /api/velas/presentaciones` (con token, para el sincronizador)
+
+Ordenadas por tipo (`recipiente`, `molde`, `jicara`) y dentro de cada uno por `orden`.
+
+```json
+[
+  { "id": 1, "tipo": "recipiente", "nombre": "Pequeña", "gramos": null, "marmoleable": true, "disponible": true, "orden": 0, "creadoEn": "…", "actualizadoEn": "…" },
+  { "id": 4, "tipo": "molde", "nombre": "Cupcake", "gramos": null, "marmoleable": false, "disponible": true, "orden": 0, "creadoEn": "…", "actualizadoEn": "…" },
+  { "id": 6, "tipo": "jicara", "nombre": "Mediana", "gramos": 250, "marmoleable": false, "disponible": true, "orden": 1, "creadoEn": "…", "actualizadoEn": "…" }
+]
+```
+
+`POST /api/velas/presentaciones` (`tipo`, `nombre` y opcionales `gramos`, `marmoleable`, `disponible`, `orden`), `PATCH /api/velas/presentaciones/:id` (todo menos `tipo`) y `DELETE /api/velas/presentaciones/:id` son para el panel. Un nombre repetido dentro del mismo tipo da `409`; `marmoleable: true` en jícara da `400`.
+
+### Fotos de cada tipo
+
+`GET /api/imagenes?categoria=velas-recipiente` (y `velas-molde`, `velas-jicara`): fotos de cómo se ve cada tipo, en el orden del panel, sin producto ni color. El sincronizador ya descarga **todas** las fotos, así que llegan a `src/content/fotos/api/velas-recipiente/`, etc.
+
+> ⚠️ El esquema del front (`FotoApiSchema` en `src/domain/catalogo.ts`) hoy solo acepta `productos`, `galeria` y `kits`. En cuanto subas una foto de velas, la compilación del front falla hasta agregar las tres categorías nuevas.
+
+### `POST /api/velas/pedidos` (pública)
+
+```http
+POST /api/velas/pedidos
+Content-Type: application/json
+
+{
+  "clienteNombre": "Lucía",
+  "clienteContacto": "lucia@correo.com",
+  "tipo": "recipiente",
+  "presentacion": "Mediana",
+  "color": "Rojo navidad",
+  "aroma": "Vainilla",
+  "topping": "Sin topping",
+  "marmoleado": true,
+  "colorMarmoleado": "Dorado",
+  "cantidad": 2,
+  "notas": "Es para un regalo"
+}
+```
+
+| Campo | Qué es |
+| --- | --- |
+| `clienteNombre` | Obligatorio, hasta 100 caracteres. |
+| `clienteContacto` | Obligatorio: un correo **o** un teléfono, como en los kits. |
+| `tipo` | Obligatorio: `recipiente`, `molde` o `jicara`. |
+| `presentacion` | Obligatorio: el `nombre` de una presentación disponible de ese tipo (`"Mediana"`, `"Cupcake"`). |
+| `color`, `aroma` | Obligatorios: el `nombre` de un color / aroma de los kits con `enVela` y disponible. |
+| `topping` | Obligatorio, hasta 60 caracteres (texto de la lista del front). |
+| `marmoleado` | Opcional (`false` por defecto). Solo si la presentación es `marmoleable`. |
+| `colorMarmoleado` | Obligatorio si `marmoleado` es `true`: otro color de vela, distinto de `color`. Sin marmoleado se ignora. |
+| `cantidad` | Opcional, entero de 1 a 20 (`1` por defecto). |
+| `notas` | Opcional, hasta 500 caracteres. |
+
+Los nombres se comparan sin importar mayúsculas ni acentos, y el pedido guarda el nombre como está en el panel. `201 Created` regresa el pedido con `id`, `gramos` (los que tenía la presentación, o `null`), `creadoEn` y todo lo anterior ya normalizado.
+
+| Estado | Cuándo (ejemplos de `message`) |
+| --- | --- |
+| `400` | Validación (`"Elige el tamaño o el molde"`, `"cantidad: hasta 20; para más, escríbenos"`, campos de más) · `"\"Mediana\" no está disponible para velas de molde. Elige: Cupcake"` · `"El color \"Verde\" no está disponible para velas"` · `"La vela de molde \"Cupcake\" no se hace marmoleada"` · `"Elige el segundo color para el marmoleado"` · `"Para el marmoleado elige un color distinto al de la vela"` |
+| `429` | Más de 5 pedidos en un minuto desde la misma IP. |
+
+`GET /api/velas/pedidos` y `DELETE /api/velas/pedidos/:id` son para el panel (con token).
+
+### Qué le toca al front
+
+1. **Sincronizar** (`scripts/sincronizar-api.mjs`): pedir `/api/velas/presentaciones` con `pedirOpcional` (una API vieja responde `404`) y guardar en `catalogo-api.json` un `velas` con las **disponibles**: `{ presentaciones: [{ tipo, nombre, gramos, marmoleable, orden }] }`, o `null` si no hay.
+2. **Esquemas** (`src/domain/catalogo.ts`): agregar `velas-recipiente`, `velas-molde` y `velas-jicara` a `FotoApiSchema.categoria`, y `velas` (nullable, por defecto `null`) a `CatalogoApiJsonSchema`.
+3. **Repositorio** (`CatalogoRepository` / `CatalogoArchivosLocales`): exponer las presentaciones por tipo, los colores y aromas de vela (los de `kits` con `enVela`) y las fotos de cada tipo.
+4. **Página de velas**: elegir tipo → presentación (con gramos si hay) → color → aroma → topping; la casilla "Marmoleada" solo cuando la presentación es `marmoleable` (nunca en jícara), y al marcarla, elegir el segundo color. Mostrar las fotos del tipo elegido. Enviar a `POST /api/velas/pedidos` y mostrar `message` si responde `400`/`429`.
 
 ## Desarrollo local
 

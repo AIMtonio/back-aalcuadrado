@@ -64,6 +64,14 @@
       "key": "pedidoId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "presentacionId",
+      "value": ""
+    },
+    {
+      "key": "pedidoVelaId",
+      "value": ""
     }
   ],
   "item": [
@@ -1081,6 +1089,217 @@
               ]
             },
             "description": "204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Velas personalizadas",
+      "description": "Tamaños y moldes de cada tipo de vela (recipiente, molde, jícara) y pedidos de velas. Los colores y aromas son los de Kits marcados para la vela. Las fotos de cada tipo se suben en Imágenes con categoria velas-recipiente, velas-molde o velas-jicara.",
+      "item": [
+        {
+          "name": "Listar presentaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/presentaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "presentaciones"
+              ]
+            },
+            "description": "Ordenadas por tipo (recipiente, molde, jicara) y orden. `gramos` es null mientras esté pendiente."
+          }
+        },
+        {
+          "name": "Crear presentación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/presentaciones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "presentaciones"
+              ]
+            },
+            "description": "201. 409 si ese tipo ya tiene una con ese nombre. 400 si es de jícara y marmoleable. Guarda el `id` en `presentacionId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"recipiente\",\n  \"nombre\": \"Extra grande\",\n  \"gramos\": null,\n  \"marmoleable\": true,\n  \"disponible\": true,\n  \"orden\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('presentacionId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Editar presentación (gramos)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/presentaciones/{{presentacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "presentaciones",
+                "{{presentacionId}}"
+              ]
+            },
+            "description": "Todo opcional menos `tipo`, que no cambia. `gramos: null` lo deja pendiente.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gramos\": 180\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Borrar presentación",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/presentaciones/{{presentacionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "presentaciones",
+                "{{presentacionId}}"
+              ]
+            },
+            "description": "204."
+          }
+        },
+        {
+          "name": "Crear pedido (público)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/pedidos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "pedidos"
+              ]
+            },
+            "description": "Sin token. `presentacion`, `color` y `aroma` deben estar disponibles (color y aroma con enVela). `colorMarmoleado` es obligatorio si `marmoleado` es true, y solo si la presentación es marmoleable. Máximo 5 por minuto por IP. Guarda el `id` en `pedidoVelaId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clienteNombre\": \"Lucía\",\n  \"clienteContacto\": \"lucia@correo.com\",\n  \"tipo\": \"recipiente\",\n  \"presentacion\": \"Mediana\",\n  \"color\": \"Rojo navidad\",\n  \"aroma\": \"Vainilla\",\n  \"topping\": \"Sin topping\",\n  \"marmoleado\": true,\n  \"colorMarmoleado\": \"Dorado\",\n  \"cantidad\": 1,\n  \"notas\": \"Es para un regalo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('pedidoVelaId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pedidos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/pedidos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "pedidos"
+              ]
+            },
+            "description": "Los más recientes primero."
+          }
+        },
+        {
+          "name": "Borrar pedido",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/velas/pedidos/{{pedidoVelaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "velas",
+                "pedidos",
+                "{{pedidoVelaId}}"
+              ]
+            },
+            "description": "204. 404 si no existe."
           }
         }
       ]

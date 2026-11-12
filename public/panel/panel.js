@@ -1,6 +1,6 @@
 // Panel de aalcuadrado: inicia sesión, administra productos y sube fotos
-// (de productos, de la sección "Así se ven" y de kits). También los colores
-// y aromas para armar kits.
+// (de productos, de la sección "Así se ven", de kits y de velas). También los
+// colores y aromas para armar kits, y los tamaños y moldes de las velas.
 // Habla con la API del mismo dominio (/api). El token vive en sessionStorage:
 // se borra al cerrar la pestaña.
 
@@ -31,6 +31,8 @@ const dialogoEditar = $('#dialogo-editar');
 const dialogoProducto = $('#dialogo-producto');
 const dialogoCategoria = $('#dialogo-categoria');
 const dialogoOpcion = $('#dialogo-opcion');
+const formPresentacion = $('#form-presentacion');
+const dialogoPresentacion = $('#dialogo-presentacion');
 const inputArchivos = formSubir.elements.archivos;
 const rejilla = $('#rejilla');
 const rejillaProductos = $('#rejilla-productos');
@@ -38,6 +40,15 @@ const rejillaGaleria = $('#rejilla-galeria');
 const rejillaCategorias = $('#rejilla-categorias');
 const rejillaPedidos = $('#rejilla-pedidos');
 const rejillaFotosKits = $('#rejilla-fotos-kits');
+const rejillaPresentaciones = $('#rejilla-presentaciones');
+const rejillaPedidosVelas = $('#rejilla-pedidos-velas');
+
+/** Los tipos de vela, como en la API (src/velas/tipos-vela.ts). Cada uno tiene su categoría de fotos. */
+const TIPOS_VELA = {
+  recipiente: 'En recipiente',
+  molde: 'De molde',
+  jicara: 'En jícara',
+};
 const filtro = $('#filtro');
 
 /* ---------- Almacenamiento (puede no estar disponible) ---------- */
@@ -107,8 +118,13 @@ function cerrarSesion(mensaje = '') {
   rejillaCategorias.replaceChildren();
   rejillaPedidos.replaceChildren();
   rejillaFotosKits.replaceChildren();
+  rejillaPresentaciones.replaceChildren();
+  rejillaPedidosVelas.replaceChildren();
+  for (const tipo of Object.keys(TIPOS_VELA)) $(`#rejilla-velas-${tipo}`).replaceChildren();
   for (const tipo of Object.values(TIPOS_OPCION)) tipo.rejilla.replaceChildren();
-  for (const dialogo of [dialogoEditar, dialogoProducto, dialogoCategoria, dialogoOpcion]) if (dialogo.open) dialogo.close();
+  for (const dialogo of [dialogoEditar, dialogoProducto, dialogoCategoria, dialogoOpcion, dialogoPresentacion]) {
+    if (dialogo.open) dialogo.close();
+  }
   $('#error-login').textContent = mensaje;
   mostrar('login');
   formLogin.elements.usuario.focus();
@@ -120,7 +136,16 @@ async function entrarAlPanel() {
   mostrar('panel');
   cambiarPestana(leer(CLAVE_PESTANA) ?? 'fotos');
   await Promise.all([cargarCatalogo(), cargarCategorias()]);
-  await Promise.all([cargarFotos(), cargarGaleria(), cargarFotosKits(), cargarOpcionesKit(), cargarPedidos()]);
+  await Promise.all([
+    cargarFotos(),
+    cargarGaleria(),
+    cargarFotosKits(),
+    cargarFotosVelas(),
+    cargarOpcionesKit(),
+    cargarPresentaciones(),
+    cargarPedidos(),
+    cargarPedidosVelas(),
+  ]);
   await cargarPublicacion();
 }
 
@@ -161,6 +186,7 @@ function cambiarPestana(nombre) {
   $('#pestana-categorias').hidden = nombre !== 'categorias';
   $('#pestana-galeria').hidden = nombre !== 'galeria';
   $('#pestana-kits').hidden = nombre !== 'kits';
+  $('#pestana-velas').hidden = nombre !== 'velas';
   $('#pestana-pedidos').hidden = nombre !== 'pedidos';
   escribir(CLAVE_PESTANA, nombre);
 }
@@ -242,7 +268,14 @@ function avisar(texto) {
 
 /** Después de subir, editar o borrar una foto o un producto: estas vistas dependen de ellos. */
 function recargar() {
-  return Promise.all([cargarFotos(), cargarGaleria(), cargarCatalogo(), cargarCategorias(), cargarFotosKits()]);
+  return Promise.all([
+    cargarFotos(),
+    cargarGaleria(),
+    cargarCatalogo(),
+    cargarCategorias(),
+    cargarFotosKits(),
+    cargarFotosVelas(),
+  ]);
 }
 
 /** "Rosa mexicano" → `rosa-mexicano`. Igual que `slugificar` del front y de la API. */
@@ -661,6 +694,60 @@ async function borrarPedido(pedido) {
   }
 }
 
+/* ---------- Pedidos de velas ---------- */
+
+let pedidosVelas = [];
+
+async function cargarPedidosVelas() {
+  pedidosVelas = await api('/velas/pedidos');
+  pintarPedidosVelas();
+}
+
+function pintarPedidosVelas() {
+  const plantilla = $('#plantilla-pedido-vela');
+  rejillaPedidosVelas.replaceChildren(
+    ...pedidosVelas.map((pedido) => {
+      const nodo = plantilla.content.firstElementChild.cloneNode(true);
+      $('.pedido__cliente', nodo).textContent = pedido.clienteNombre;
+      $('.pedido__fecha', nodo).textContent = formatoFecha(pedido.creadoEn);
+      $('.pedido__contacto', nodo).textContent = pedido.clienteContacto;
+      const gramos = pedido.gramos ? ` (${pedido.gramos} g)` : '';
+      $('.pedido__titulo', nodo).textContent =
+        `${pedido.cantidad} × ${TIPOS_VELA[pedido.tipo] ?? pedido.tipo} · ${pedido.presentacion}${gramos}`;
+      $('.pedido__vela', nodo).textContent = [
+        `Color ${pedido.color}`,
+        pedido.marmoleado && `marmoleada con ${pedido.colorMarmoleado}`,
+        `Aroma ${pedido.aroma}`,
+        `Topping ${pedido.topping}`,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+      if (pedido.notas) {
+        const notas = $('.pedido__notas', nodo);
+        notas.hidden = false;
+        $('p', notas).textContent = pedido.notas;
+      }
+      $('[data-accion="borrar"]', nodo).addEventListener('click', () => borrarPedidoVela(pedido));
+      return nodo;
+    }),
+  );
+  $('#total-pedidos-velas').textContent = `(${pedidosVelas.length})`;
+  $('#vacio-pedidos-velas').hidden = pedidosVelas.length > 0;
+}
+
+async function borrarPedidoVela(pedido) {
+  if (!window.confirm(`¿Borrar el pedido de vela de ${pedido.clienteNombre}? Hazlo solo cuando ya lo hayas cotizado.`)) {
+    return;
+  }
+  try {
+    await api(`/velas/pedidos/${pedido.id}`, { method: 'DELETE' });
+    avisar('Pedido borrado');
+    await cargarPedidosVelas();
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
 /* ---------- Campos de una foto (subir y editar) ---------- */
 
 const contenedoresCampos = [...document.querySelectorAll('[data-asignacion]')];
@@ -719,6 +806,8 @@ function sugerirAlt(form) {
       ? 'Aretes en su caja, sobre la mesa'
       : categoria === 'kits'
         ? 'Kit de jabón en forma de árbol y vela roja con canela'
+        : categoria.startsWith('velas-')
+        ? 'Vela mediana en recipiente, color azul marmoleado'
         : producto
         ? [`Aretes ${producto.nombre}`, color && `en color ${color.nombre.toLowerCase()}`].filter(Boolean).join(', ')
         : 'Aretes Nochebuena, en color rojo';
@@ -874,6 +963,8 @@ function pintarFoto(imagen, mover) {
       ? 'Así se ven'
       : imagen.categoria === 'kits'
         ? 'Kits'
+        : imagen.categoria.startsWith('velas-')
+        ? `Velas · ${TIPOS_VELA[imagen.categoria.slice('velas-'.length)] ?? imagen.categoria}`
         : (producto?.nombre ?? imagen.producto ?? 'Sin producto');
   titulo.append(nombre);
   const detalle = [color?.nombre ?? imagen.color, `orden ${imagen.orden}`].filter(Boolean).join(' · ');
@@ -940,7 +1031,8 @@ filtro.addEventListener('change', () => cargarFotos().catch((e) => avisar(e.mess
 
 /**
  * Una sección de fotos de una sola categoría que se ordenan con flechas y se
- * suben al final. La usan "Así se ven" (galeria) y "Fotos de kits" (kits).
+ * suben al final. La usan "Así se ven" (galeria), "Fotos de kits" (kits) y
+ * las fotos de cada tipo de vela (velas-recipiente, velas-molde, velas-jicara).
  */
 function seccionDeFotos({ categoria, form, rejilla, total, vacio, previas, error, boton }) {
   /** Las fotos en el orden en que salen en el sitio. */
@@ -1040,6 +1132,21 @@ const cargarFotosKits = seccionDeFotos({
   error: $('#error-kits'),
   boton: $('#boton-subir-kits'),
 });
+
+/** Una sección por tipo de vela; se cargan juntas. */
+const cargasVelas = Object.keys(TIPOS_VELA).map((tipo) =>
+  seccionDeFotos({
+    categoria: `velas-${tipo}`,
+    form: $(`#form-velas-${tipo}`),
+    rejilla: $(`#rejilla-velas-${tipo}`),
+    total: $(`#total-velas-${tipo}`),
+    vacio: $(`#vacio-velas-${tipo}`),
+    previas: $(`#previas-velas-${tipo}`),
+    error: $(`#error-velas-${tipo}`),
+    boton: $(`#boton-subir-velas-${tipo}`),
+  }),
+);
+const cargarFotosVelas = () => Promise.all(cargasVelas.map((cargar) => cargar()));
 
 /* ---------- Colores y aromas de kits ---------- */
 
@@ -1191,6 +1298,132 @@ async function borrarOpcion(clave, opcion) {
     await api(`${TIPOS_OPCION[clave].ruta}/${opcion.id}`, { method: 'DELETE' });
     avisar('Borrado');
     await cargarOpcionesKit();
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
+/* ---------- Tamaños y moldes de velas ---------- */
+
+let presentaciones = [];
+
+async function cargarPresentaciones() {
+  presentaciones = await api('/velas/presentaciones');
+  pintarPresentaciones();
+}
+
+function pintarPresentaciones() {
+  const plantilla = $('#plantilla-opcion');
+  rejillaPresentaciones.replaceChildren(
+    ...presentaciones.map((presentacion) => {
+      const nodo = plantilla.content.firstElementChild.cloneNode(true);
+      nodo.classList.toggle('opcion--agotada', !presentacion.disponible);
+      $('.opcion__nombre', nodo).textContent = `${TIPOS_VELA[presentacion.tipo]} · ${presentacion.nombre}`;
+      const insignias = [
+        presentacion.gramos ? `${presentacion.gramos} g` : 'Gramos pendientes',
+        presentacion.marmoleable && 'Marmoleable',
+        !presentacion.disponible && 'No disponible',
+        presentacion.orden !== 0 && `orden ${presentacion.orden}`,
+      ];
+      $('.opcion__insignias', nodo).replaceChildren(
+        ...insignias.filter(Boolean).map((texto) => {
+          const span = document.createElement('span');
+          span.className = 'insignia';
+          if (texto === 'No disponible' || texto === 'Gramos pendientes') span.classList.add('insignia--alerta');
+          span.textContent = texto;
+          return span;
+        }),
+      );
+      $('[data-accion="editar"]', nodo).addEventListener('click', () => abrirPresentacion(presentacion));
+      $('[data-accion="borrar"]', nodo).addEventListener('click', () => borrarPresentacion(presentacion));
+      return nodo;
+    }),
+  );
+  $('#total-presentaciones').textContent = `(${presentaciones.length})`;
+  $('#vacio-presentaciones').hidden = presentaciones.length > 0;
+}
+
+/** La que se está editando, o `null` si es nueva. */
+let presentacionEditando = null;
+
+/** En jícara el marmoleado no se aprecia: la casilla se apaga. */
+function actualizarMarmoleable() {
+  const campos = formPresentacion.elements;
+  const esJicara = campos.tipo.value === 'jicara';
+  campos.marmoleable.disabled = esJicara;
+  if (esJicara) campos.marmoleable.checked = false;
+  $('#nota-marmoleable').textContent = esJicara ? '(en jícara no se aprecia)' : '';
+}
+
+formPresentacion.elements.tipo.addEventListener('change', actualizarMarmoleable);
+$('#boton-nueva-presentacion').addEventListener('click', () => abrirPresentacion(null));
+
+function abrirPresentacion(presentacion) {
+  presentacionEditando = presentacion;
+  formPresentacion.reset();
+  $('#error-presentacion').textContent = '';
+  $('#titulo-presentacion').textContent = presentacion
+    ? `Editar ${TIPOS_VELA[presentacion.tipo].toLowerCase()} · ${presentacion.nombre}`
+    : 'Nueva presentación';
+  const campos = formPresentacion.elements;
+  campos.tipo.disabled = Boolean(presentacion);
+  if (presentacion) {
+    campos.tipo.value = presentacion.tipo;
+    campos.nombre.value = presentacion.nombre;
+    campos.gramos.value = presentacion.gramos ?? '';
+    campos.orden.value = presentacion.orden || '';
+    campos.marmoleable.checked = presentacion.marmoleable;
+    campos.disponible.checked = presentacion.disponible;
+  }
+  actualizarMarmoleable();
+  dialogoPresentacion.showModal();
+  campos.nombre.focus();
+}
+
+for (const boton of dialogoPresentacion.querySelectorAll('[data-cerrar]')) {
+  boton.addEventListener('click', () => dialogoPresentacion.close());
+}
+
+formPresentacion.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const error = $('#error-presentacion');
+  error.textContent = '';
+  if (!formPresentacion.reportValidity()) return;
+
+  const campos = formPresentacion.elements;
+  const datos = {
+    ...(!presentacionEditando && { tipo: campos.tipo.value }),
+    nombre: campos.nombre.value.trim(),
+    gramos: campos.gramos.value ? Number(campos.gramos.value) : null,
+    orden: Number(campos.orden.value || 0),
+    marmoleable: campos.marmoleable.checked,
+    disponible: campos.disponible.checked,
+  };
+
+  const boton = $('#boton-guardar-presentacion');
+  boton.disabled = true;
+  try {
+    presentacionEditando
+      ? await api(`/velas/presentaciones/${presentacionEditando.id}`, { method: 'PATCH', json: datos })
+      : await api('/velas/presentaciones', { method: 'POST', json: datos });
+    dialogoPresentacion.close();
+    avisar(presentacionEditando ? 'Cambios guardados' : `"${datos.nombre}" agregada`);
+    await cargarPresentaciones();
+  } catch (e) {
+    error.textContent = e.message;
+  } finally {
+    boton.disabled = false;
+  }
+});
+
+async function borrarPresentacion(presentacion) {
+  const nombre = `${TIPOS_VELA[presentacion.tipo].toLowerCase()} · ${presentacion.nombre}`;
+  const consejo = presentacion.disponible ? ' Si solo dejas de hacerla, mejor edítala y desmarca "Disponible".' : '';
+  if (!window.confirm(`¿Borrar "${nombre}"? No se puede deshacer.${consejo}`)) return;
+  try {
+    await api(`/velas/presentaciones/${presentacion.id}`, { method: 'DELETE' });
+    avisar('Borrada');
+    await cargarPresentaciones();
   } catch (e) {
     avisar(e.message);
   }
