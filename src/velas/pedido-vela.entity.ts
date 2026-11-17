@@ -4,6 +4,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { decimalANumero } from '../comun/decimal-a-numero.js';
 import { TIPOS_VELA, type TipoVela } from './tipos-vela.js';
 
 /**
@@ -57,6 +58,20 @@ export class PedidoVela {
 
   @Column({ type: 'int', unsigned: true, default: 1 })
   cantidad: number;
+
+  /**
+   * El precio de una vela que tenía la presentación al pedir (`null` si no estaba
+   * definido). Lo pone la API, nunca el cliente. Total = `precioUnitario × cantidad`.
+   */
+  @Column({
+    name: 'precio_unitario',
+    type: 'decimal',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+    transformer: decimalANumero,
+  })
+  precioUnitario: number | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   notas: string | null;

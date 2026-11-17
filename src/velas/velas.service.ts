@@ -61,6 +61,7 @@ export class VelasService {
       tipo: datos.tipo,
       nombre: datos.nombre,
       gramos: datos.gramos ?? null,
+      precio: datos.precio ?? null,
       marmoleable: datos.marmoleable ?? false,
       disponible: datos.disponible ?? true,
       orden: datos.orden ?? 0,
@@ -127,7 +128,7 @@ export class VelasService {
 
   /**
    * Revisa que lo elegido exista y esté disponible, y guarda los nombres tal
-   * como están en el panel. Sin precios: el dueño cotiza a mano.
+   * como están en el panel, con los gramos y el precio que tenía la presentación.
    */
   async crearPedido(datos: CrearPedidoVelaDto): Promise<PedidoVela> {
     const tipo = NOMBRES_TIPO_VELA[datos.tipo].toLowerCase();
@@ -193,6 +194,7 @@ export class VelasService {
         tipo: datos.tipo,
         presentacion: presentacion.nombre,
         gramos: presentacion.gramos,
+        precioUnitario: presentacion.precio,
         color,
         aroma,
         topping: datos.topping,

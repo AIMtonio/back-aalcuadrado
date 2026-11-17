@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { decimalANumero } from '../comun/decimal-a-numero.js';
 import { TIPOS_VELA, type TipoVela } from './tipos-vela.js';
 
 /**
@@ -30,6 +31,16 @@ export class PresentacionVela {
   /** Gramos de cera. `null` mientras no se haya definido. */
   @Column({ type: 'int', unsigned: true, nullable: true })
   gramos: number | null;
+
+  /** Precio de una vela de esta presentación. `null` mientras no se haya definido. */
+  @Column({
+    type: 'decimal',
+    precision: 8,
+    scale: 2,
+    nullable: true,
+    transformer: decimalANumero,
+  })
+  precio: number | null;
 
   /** Se puede pedir marmoleada. Nunca en jícara. */
   @Column({ type: 'boolean', default: false })

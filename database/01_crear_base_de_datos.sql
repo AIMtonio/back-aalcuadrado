@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS velas_presentaciones (
   tipo            ENUM('recipiente', 'molde', 'jicara') NOT NULL,
   nombre          VARCHAR(40)   NOT NULL COMMENT 'Pequeña, Mediana, Grande o el molde (Cupcake)',
   gramos          INT UNSIGNED  NULL     COMMENT 'Gramos de cera; NULL = pendiente',
+  precio          DECIMAL(8, 2) NULL     COMMENT 'Precio de una vela; NULL = pendiente',
   marmoleable     TINYINT(1)    NOT NULL DEFAULT 0,
   disponible      TINYINT(1)    NOT NULL DEFAULT 1,
   orden           INT           NOT NULL DEFAULT 0,
@@ -156,7 +157,7 @@ CREATE TABLE IF NOT EXISTS velas_presentaciones (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Pedidos de velas que llegan desde el front. Guardan los nombres elegidos (no ids) y los
--- gramos que tenía la presentación. Los cotiza el dueño a mano (pestaña Pedidos del panel).
+-- gramos y el precio que tenía la presentación. Los cotiza el dueño a mano (pestaña Pedidos del panel).
 CREATE TABLE IF NOT EXISTS pedidos_velas (
   id                INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   cliente_nombre    VARCHAR(100)  NOT NULL,
@@ -170,6 +171,7 @@ CREATE TABLE IF NOT EXISTS pedidos_velas (
   marmoleado        TINYINT(1)    NOT NULL DEFAULT 0,
   color_marmoleado  VARCHAR(60)   NULL,
   cantidad          INT UNSIGNED  NOT NULL DEFAULT 1,
+  precio_unitario   DECIMAL(8, 2) NULL     COMMENT 'Precio de la presentación al pedir; NULL = no tenía',
   notas             VARCHAR(500)  NULL,
   creado_en         DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),

@@ -197,7 +197,7 @@
             <button type="button" class="boton" id="boton-nueva-presentacion">Nueva presentación</button>
           </div>
           <p class="nota">
-            Lo que se puede pedir de cada tipo de vela. Pon los gramos cuando los tengas y desmarca "Disponible"
+            Lo que se puede pedir de cada tipo de vela. Pon los gramos y el precio cuando los tengas y desmarca "Disponible"
             si dejas de hacer alguna. Los colores y aromas son los de la pestaña Kits marcados para la vela.
           </p>
           <p class="vacio" id="vacio-presentaciones" hidden>
@@ -467,6 +467,10 @@
           <label>
             <span>Gramos <small>(vacío = pendiente)</small></span>
             <input name="gramos" type="number" min="1" step="1" />
+          </label>
+          <label>
+            <span>Precio por vela <small>(vacío = pendiente)</small></span>
+            <input name="precio" type="number" min="0.01" max="999999" step="0.01" />
           </label>
           <label>
             <span>Orden <small>(opcional; el más bajo sale primero)</small></span>
