@@ -814,6 +814,7 @@ describe('API (e2e)', () => {
       tipo: 'recipiente',
       nombre: 'Mediana',
       gramos: null,
+      precio: null,
       marmoleable: true,
       disponible: true,
     });
@@ -859,6 +860,27 @@ describe('API (e2e)', () => {
       .set(auth)
       .send({ tipo: 'molde' })
       .expect(400);
+
+    // El precio también se pone después: hasta 2 decimales, mayor que 0; "" o null lo dejan pendiente.
+    const conPrecio = await request(http)
+      .patch(`/api/velas/presentaciones/${mediana.body.id}`)
+      .set(auth)
+      .send({ precio: 149.5 })
+      .expect(200);
+    expect(conPrecio.body).toMatchObject({ precio: 149.5, gramos: 180 });
+    for (const precio of [0, -10, 1.234, 'caro']) {
+      await request(http)
+        .patch(`/api/velas/presentaciones/${mediana.body.id}`)
+        .set(auth)
+        .send({ precio })
+        .expect(400);
+    }
+    const sinPrecio = await request(http)
+      .patch(`/api/velas/presentaciones/${jicara.body.id}`)
+      .set(auth)
+      .send({ precio: '' })
+      .expect(200);
+    expect(sinPrecio.body.precio).toBeNull();
 
     const lista = await request(http)
       .get('/api/velas/presentaciones')
@@ -918,6 +940,7 @@ describe('API (e2e)', () => {
       tipo: 'recipiente',
       presentacion: 'Mediana',
       gramos: 180,
+      precioUnitario: 149.5,
       color: 'Azul cielo',
       aroma: 'Vainilla',
       marmoleado: false,
@@ -958,6 +981,8 @@ describe('API (e2e)', () => {
       colorMarmoleado: 'Blanco',
     }).expect(201);
     expect(ignorado.body.colorMarmoleado).toBeNull();
+    // Cupcake no tiene precio todavía.
+    expect(ignorado.body.precioUnitario).toBeNull();
 
     // Presentaciones de otro tipo, colores solo de jabón y opciones que no existen.
     const otroTipo = await pedir({
@@ -972,6 +997,7 @@ describe('API (e2e)', () => {
     await pedir({ clienteNombre: '   ' }).expect(400);
     await pedir({ clienteContacto: 'no sé' }).expect(400);
     await pedir({ precio: 1 }).expect(400);
+    await pedir({ precioUnitario: 1 }).expect(400);
 
     // Lo que se desactiva en el panel deja de aceptarse.
     const presentaciones = await request(http)

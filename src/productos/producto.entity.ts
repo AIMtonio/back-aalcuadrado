@@ -8,18 +8,13 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { decimalANumero } from '../comun/decimal-a-numero.js';
 import {
   COLECCIONES,
   ETIQUETAS,
   type Coleccion,
   type Etiqueta,
 } from './catalogo.js';
-
-/** MySQL regresa DECIMAL como texto: se convierte a número al leer. */
-const decimalANumero = {
-  to: (valor: number | null) => valor,
-  from: (valor: string | null) => (valor === null ? null : Number(valor)),
-};
 
 /** Tabla `productos`. Debe coincidir con database/01_crear_base_de_datos.sql. */
 @Entity('productos')

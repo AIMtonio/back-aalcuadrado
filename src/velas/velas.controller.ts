@@ -51,7 +51,7 @@ export class VelasController {
     return this.velas.eliminarPresentacion(id);
   }
 
-  /** Pública para el front, sin iniciar sesión. Sin precios: el dueño cotiza a mano. */
+  /** Pública para el front, sin iniciar sesión. El precio lo pone la API, no el cliente. */
   @Post('pedidos')
   @Publico()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })

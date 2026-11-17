@@ -3,7 +3,9 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
+  IsPositive,
   IsString,
   Max,
   MaxLength,
@@ -33,6 +35,17 @@ export class ActualizarPresentacionDto {
   @Min(1)
   @Max(100_000)
   gramos?: number | null;
+
+  /** `null` o `""` deja el precio pendiente. Hasta 2 decimales. */
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? null : value))
+  @IsNumber(
+    { maxDecimalPlaces: 2 },
+    { message: 'precio: pon un número con hasta 2 decimales' },
+  )
+  @IsPositive({ message: 'El precio debe ser mayor que 0' })
+  @Max(999_999)
+  precio?: number | null;
 
   @IsOptional()
   @IsBoolean()

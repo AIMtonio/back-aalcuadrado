@@ -1113,7 +1113,7 @@
                 "presentaciones"
               ]
             },
-            "description": "Ordenadas por tipo (recipiente, molde, jicara) y orden. `gramos` es null mientras esté pendiente."
+            "description": "Ordenadas por tipo (recipiente, molde, jicara) y orden. `gramos` y `precio` son null mientras estén pendientes."
           }
         },
         {
@@ -1140,7 +1140,7 @@
             "description": "201. 409 si ese tipo ya tiene una con ese nombre. 400 si es de jícara y marmoleable. Guarda el `id` en `presentacionId`.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tipo\": \"recipiente\",\n  \"nombre\": \"Extra grande\",\n  \"gramos\": null,\n  \"marmoleable\": true,\n  \"disponible\": true,\n  \"orden\": 3\n}",
+              "raw": "{\n  \"tipo\": \"recipiente\",\n  \"nombre\": \"Extra grande\",\n  \"gramos\": null,\n  \"precio\": null,\n  \"marmoleable\": true,\n  \"disponible\": true,\n  \"orden\": 3\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1162,7 +1162,7 @@
           ]
         },
         {
-          "name": "Editar presentación (gramos)",
+          "name": "Editar presentación (gramos y precio)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1183,10 +1183,10 @@
                 "{{presentacionId}}"
               ]
             },
-            "description": "Todo opcional menos `tipo`, que no cambia. `gramos: null` lo deja pendiente.",
+            "description": "Todo opcional menos `tipo`, que no cambia. `gramos: null` o `precio: null` los dejan pendientes.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"gramos\": 180\n}",
+              "raw": "{\n  \"gramos\": 180,\n  \"precio\": 150\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -359,7 +359,7 @@ En el front:
 
 ## Velas personalizadas
 
-Velas individuales que quien visita el sitio arma a su gusto. Como los kits, el dueño las cotiza y las hace a mano: no hay precios ni inventario de este lado. Todo se administra en la pestaña **Velas** del panel (tamaños, moldes y fotos) y los pedidos salen en la pestaña **Pedidos**.
+Velas individuales que quien visita el sitio arma a su gusto. Cada presentación puede tener su **precio** (por vela); no hay inventario de este lado. Todo se administra en la pestaña **Velas** del panel (tamaños, moldes, precios y fotos) y los pedidos salen en la pestaña **Pedidos**.
 
 ### Las reglas
 
@@ -373,6 +373,7 @@ Velas individuales que quien visita el sitio arma a su gusto. Como los kits, el 
 - **Colores y aromas** son los mismos de los kits (pestaña Kits), los marcados para la **vela** (`enVela: true`) y **disponibles**. El sincronizador ya los descarga en `catalogo-api.json` → `kits.colores` / `kits.aromas`.
 - **Toppings**: igual que en "Arma tu kit", la lista vive en el front (`sitio.kits.toppings`, incluido "Sin topping"); la API guarda el texto tal cual.
 - **Gramos**: cada presentación tiene `gramos`, que puede ser `null` mientras el dueño no lo defina. El front debe mostrarlos solo si vienen (por ejemplo "Mediana · 180 g").
+- **Precio**: cada presentación tiene `precio` (número, en pesos, por vela), que puede ser `null` mientras el dueño no lo defina. El front lo muestra solo si viene (por ejemplo "Mediana · 180 g · $150.00") y puede calcular el total como `precio × cantidad`; sin precio, mostrar algo como "Precio a cotizar". El marmoleado no cambia el precio.
 - Una presentación con `disponible: false` no debe salir en el sitio; la API rechaza pedidos de ella.
 
 ### `GET /api/velas/presentaciones` (con token, para el sincronizador)
@@ -381,13 +382,13 @@ Ordenadas por tipo (`recipiente`, `molde`, `jicara`) y dentro de cada uno por `o
 
 ```json
 [
-  { "id": 1, "tipo": "recipiente", "nombre": "Pequeña", "gramos": null, "marmoleable": true, "disponible": true, "orden": 0, "creadoEn": "…", "actualizadoEn": "…" },
-  { "id": 4, "tipo": "molde", "nombre": "Cupcake", "gramos": null, "marmoleable": false, "disponible": true, "orden": 0, "creadoEn": "…", "actualizadoEn": "…" },
-  { "id": 6, "tipo": "jicara", "nombre": "Mediana", "gramos": 250, "marmoleable": false, "disponible": true, "orden": 1, "creadoEn": "…", "actualizadoEn": "…" }
+  { "id": 1, "tipo": "recipiente", "nombre": "Pequeña", "gramos": null, "precio": 150, "marmoleable": true, "disponible": true, "orden": 0, "creadoEn": "…", "actualizadoEn": "…" },
+  { "id": 4, "tipo": "molde", "nombre": "Cupcake", "gramos": null, "precio": null, "marmoleable": false, "disponible": true, "orden": 0, "creadoEn": "…", "actualizadoEn": "…" },
+  { "id": 6, "tipo": "jicara", "nombre": "Mediana", "gramos": 250, "precio": 220.5, "marmoleable": false, "disponible": true, "orden": 1, "creadoEn": "…", "actualizadoEn": "…" }
 ]
 ```
 
-`POST /api/velas/presentaciones` (`tipo`, `nombre` y opcionales `gramos`, `marmoleable`, `disponible`, `orden`), `PATCH /api/velas/presentaciones/:id` (todo menos `tipo`) y `DELETE /api/velas/presentaciones/:id` son para el panel. Un nombre repetido dentro del mismo tipo da `409`; `marmoleable: true` en jícara da `400`.
+`POST /api/velas/presentaciones` (`tipo`, `nombre` y opcionales `gramos`, `precio`, `marmoleable`, `disponible`, `orden`), `PATCH /api/velas/presentaciones/:id` (todo menos `tipo`) y `DELETE /api/velas/presentaciones/:id` son para el panel. Un nombre repetido dentro del mismo tipo da `409`; `marmoleable: true` en jícara da `400`; `precio` debe ser mayor que 0 con hasta 2 decimales (`null` o `""` lo dejan pendiente).
 
 ### Fotos de cada tipo
 
@@ -429,7 +430,7 @@ Content-Type: application/json
 | `cantidad` | Opcional, entero de 1 a 20 (`1` por defecto). |
 | `notas` | Opcional, hasta 500 caracteres. |
 
-Los nombres se comparan sin importar mayúsculas ni acentos, y el pedido guarda el nombre como está en el panel. `201 Created` regresa el pedido con `id`, `gramos` (los que tenía la presentación, o `null`), `creadoEn` y todo lo anterior ya normalizado.
+Los nombres se comparan sin importar mayúsculas ni acentos, y el pedido guarda el nombre como está en el panel. El precio **no** se manda (un `precio` o `precioUnitario` en el cuerpo da `400`): la API lo toma de la presentación. `201 Created` regresa el pedido con `id`, `gramos` y `precioUnitario` (los que tenía la presentación, o `null`), `creadoEn` y todo lo anterior ya normalizado.
 
 | Estado | Cuándo (ejemplos de `message`) |
 | --- | --- |
@@ -440,10 +441,10 @@ Los nombres se comparan sin importar mayúsculas ni acentos, y el pedido guarda 
 
 ### Qué le toca al front
 
-1. **Sincronizar** (`scripts/sincronizar-api.mjs`): pedir `/api/velas/presentaciones` con `pedirOpcional` (una API vieja responde `404`) y guardar en `catalogo-api.json` un `velas` con las **disponibles**: `{ presentaciones: [{ tipo, nombre, gramos, marmoleable, orden }] }`, o `null` si no hay.
+1. **Sincronizar** (`scripts/sincronizar-api.mjs`): pedir `/api/velas/presentaciones` con `pedirOpcional` (una API vieja responde `404`) y guardar en `catalogo-api.json` un `velas` con las **disponibles**: `{ presentaciones: [{ tipo, nombre, gramos, precio, marmoleable, orden }] }`, o `null` si no hay.
 2. **Esquemas** (`src/domain/catalogo.ts`): agregar `velas-recipiente`, `velas-molde` y `velas-jicara` a `FotoApiSchema.categoria`, y `velas` (nullable, por defecto `null`) a `CatalogoApiJsonSchema`.
 3. **Repositorio** (`CatalogoRepository` / `CatalogoArchivosLocales`): exponer las presentaciones por tipo, los colores y aromas de vela (los de `kits` con `enVela`) y las fotos de cada tipo.
-4. **Página de velas**: elegir tipo → presentación (con gramos si hay) → color → aroma → topping; la casilla "Marmoleada" solo cuando la presentación es `marmoleable` (nunca en jícara), y al marcarla, elegir el segundo color. Mostrar las fotos del tipo elegido. Enviar a `POST /api/velas/pedidos` y mostrar `message` si responde `400`/`429`.
+4. **Página de velas**: elegir tipo → presentación (con gramos y precio si hay) → color → aroma → topping; la casilla "Marmoleada" solo cuando la presentación es `marmoleable` (nunca en jícara), y al marcarla, elegir el segundo color. Mostrar las fotos del tipo elegido. Enviar a `POST /api/velas/pedidos` y mostrar `message` si responde `400`/`429`.
 
 ## Desarrollo local
 

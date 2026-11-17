@@ -659,6 +659,8 @@ async function cargarPedidos() {
   pintarPedidos();
 }
 
+const formatoPrecio = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' });
+
 function formatoFecha(fechaIso) {
   return new Date(fechaIso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
 }
@@ -712,8 +714,13 @@ function pintarPedidosVelas() {
       $('.pedido__fecha', nodo).textContent = formatoFecha(pedido.creadoEn);
       $('.pedido__contacto', nodo).textContent = pedido.clienteContacto;
       const gramos = pedido.gramos ? ` (${pedido.gramos} g)` : '';
+      let precio = '';
+      if (pedido.precioUnitario != null) {
+        precio = ` · ${formatoPrecio.format(pedido.precioUnitario * pedido.cantidad)}`;
+        if (pedido.cantidad > 1) precio += ` (${formatoPrecio.format(pedido.precioUnitario)} c/u)`;
+      }
       $('.pedido__titulo', nodo).textContent =
-        `${pedido.cantidad} × ${TIPOS_VELA[pedido.tipo] ?? pedido.tipo} · ${pedido.presentacion}${gramos}`;
+        `${pedido.cantidad} × ${TIPOS_VELA[pedido.tipo] ?? pedido.tipo} · ${pedido.presentacion}${gramos}${precio}`;
       $('.pedido__vela', nodo).textContent = [
         `Color ${pedido.color}`,
         pedido.marmoleado && `marmoleada con ${pedido.colorMarmoleado}`,
@@ -1321,6 +1328,7 @@ function pintarPresentaciones() {
       $('.opcion__nombre', nodo).textContent = `${TIPOS_VELA[presentacion.tipo]} · ${presentacion.nombre}`;
       const insignias = [
         presentacion.gramos ? `${presentacion.gramos} g` : 'Gramos pendientes',
+        presentacion.precio != null ? formatoPrecio.format(presentacion.precio) : 'Precio pendiente',
         presentacion.marmoleable && 'Marmoleable',
         !presentacion.disponible && 'No disponible',
         presentacion.orden !== 0 && `orden ${presentacion.orden}`,
@@ -1329,7 +1337,7 @@ function pintarPresentaciones() {
         ...insignias.filter(Boolean).map((texto) => {
           const span = document.createElement('span');
           span.className = 'insignia';
-          if (texto === 'No disponible' || texto === 'Gramos pendientes') span.classList.add('insignia--alerta');
+          if (['No disponible', 'Gramos pendientes', 'Precio pendiente'].includes(texto)) span.classList.add('insignia--alerta');
           span.textContent = texto;
           return span;
         }),
@@ -1371,6 +1379,7 @@ function abrirPresentacion(presentacion) {
     campos.tipo.value = presentacion.tipo;
     campos.nombre.value = presentacion.nombre;
     campos.gramos.value = presentacion.gramos ?? '';
+    campos.precio.value = presentacion.precio ?? '';
     campos.orden.value = presentacion.orden || '';
     campos.marmoleable.checked = presentacion.marmoleable;
     campos.disponible.checked = presentacion.disponible;
@@ -1395,6 +1404,7 @@ formPresentacion.addEventListener('submit', async (evento) => {
     ...(!presentacionEditando && { tipo: campos.tipo.value }),
     nombre: campos.nombre.value.trim(),
     gramos: campos.gramos.value ? Number(campos.gramos.value) : null,
+    precio: campos.precio.value ? Number(campos.precio.value) : null,
     orden: Number(campos.orden.value || 0),
     marmoleable: campos.marmoleable.checked,
     disponible: campos.disponible.checked,
