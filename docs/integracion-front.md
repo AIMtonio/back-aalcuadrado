@@ -341,15 +341,17 @@ Los ocho campos son obligatorios (texto, hasta 150 caracteres `clienteContacto` 
 
 ## Colores, aromas y fotos de kits
 
-Se administran en la pestaña **Kits** del panel y el sitio los toma al compilar, como los productos: `npm run api:sincronizar` los guarda en `catalogo-api.json` (solo los **disponibles**) y descarga las fotos de kits a `src/content/fotos/api/kits/`.
+Los **colores** están en dos listas separadas, una por pieza, en la pestaña **Colores** del panel: `jabon` (el jabón del kit) y `vela` (la vela del kit y las [velas personalizadas](#velas-personalizadas), también para el marmoleado). El mismo nombre puede estar en las dos con distinto tono. Los **aromas** siguen en la pestaña **Kits**, marcados para jabón, vela o ambos. El sitio los toma al compilar, como los productos: `npm run api:sincronizar` los guarda en `catalogo-api.json` (solo los **disponibles**) y descarga las fotos de kits a `src/content/fotos/api/kits/`.
 
 | Método | Ruta | Respuesta |
 | --- | --- | --- |
-| `GET` | `/api/kits/colores` | `[{ id, nombre, hex, enJabon, enVela, disponible, orden }]`, por `orden` y nombre |
+| `GET` | `/api/colores` | `[{ id, pieza, nombre, hex, disponible, orden }]`: primero los de `jabon`, luego los de `vela`; dentro de cada uno por `orden` y nombre. `?pieza=jabon` o `?pieza=vela` filtra |
 | `GET` | `/api/kits/aromas` | `[{ id, nombre, enJabon, enVela, disponible, orden }]` |
 | `GET` | `/api/imagenes?categoria=kits` | Fotos de kits ya hechos, por `orden` (sin producto ni color) |
 
-Piden token (los usa el sincronizador). `POST`, `PATCH /:id` y `DELETE /:id` existen para el panel.
+Piden token (los usa el sincronizador). `POST`, `PATCH /:id` y `DELETE /:id` existen para el panel. Al crear un color, `pieza` es obligatoria y después no cambia; un nombre repetido dentro de la misma pieza da `409`.
+
+> **Compatibilidad:** `GET /api/kits/colores` sigue respondiendo, solo lectura, con la forma de antes: cada color de `/api/colores` con `enJabon` / `enVela` según su pieza (y sin `pieza`). Así el sincronizador actual sigue funcionando sin cambios. Pásalo a `/api/colores` cuando puedas; esa ruta se quitará después.
 
 En el front:
 
@@ -370,7 +372,7 @@ Velas individuales que quien visita el sitio arma a su gusto. Cada presentación
 | `jicara` | En jícara | Pequeña, Mediana, Grande | **Nunca**: no se apreciaría. La API no deja marcarla como marmoleable |
 
 - Cada vela lleva **tipo**, **presentación** (tamaño o molde), **color**, **aroma** y **topping**; opcionalmente **marmoleado** (con un segundo color), **cantidad** (1 a 20) y **notas**.
-- **Colores y aromas** son los mismos de los kits (pestaña Kits), los marcados para la **vela** (`enVela: true`) y **disponibles**. El sincronizador ya los descarga en `catalogo-api.json` → `kits.colores` / `kits.aromas`.
+- **Colores**: los de **vela** (`pieza: "vela"`, pestaña Colores) **disponibles**. **Aromas**: los de los kits marcados para la **vela** (`enVela: true`) y disponibles. El sincronizador ya los descarga en `catalogo-api.json` → `kits.colores` / `kits.aromas`.
 - **Toppings**: igual que en "Arma tu kit", la lista vive en el front (`sitio.kits.toppings`, incluido "Sin topping"); la API guarda el texto tal cual.
 - **Gramos**: cada presentación tiene `gramos`, que puede ser `null` mientras el dueño no lo defina. El front debe mostrarlos solo si vienen (por ejemplo "Mediana · 180 g").
 - **Precio**: cada presentación tiene `precio` (número, en pesos, por vela), que puede ser `null` mientras el dueño no lo defina. El front lo muestra solo si viene (por ejemplo "Mediana · 180 g · $150.00") y puede calcular el total como `precio × cantidad`; sin precio, mostrar algo como "Precio a cotizar". El marmoleado no cambia el precio.
@@ -423,7 +425,7 @@ Content-Type: application/json
 | `clienteContacto` | Obligatorio: un correo **o** un teléfono, como en los kits. |
 | `tipo` | Obligatorio: `recipiente`, `molde` o `jicara`. |
 | `presentacion` | Obligatorio: el `nombre` de una presentación disponible de ese tipo (`"Mediana"`, `"Cupcake"`). |
-| `color`, `aroma` | Obligatorios: el `nombre` de un color / aroma de los kits con `enVela` y disponible. |
+| `color`, `aroma` | Obligatorios: el `nombre` de un color de vela disponible / de un aroma de los kits con `enVela` y disponible. |
 | `topping` | Obligatorio, hasta 60 caracteres (texto de la lista del front). |
 | `marmoleado` | Opcional (`false` por defecto). Solo si la presentación es `marmoleable`. |
 | `colorMarmoleado` | Obligatorio si `marmoleado` es `true`: otro color de vela, distinto de `color`. Sin marmoleado se ignora. |
@@ -443,7 +445,7 @@ Los nombres se comparan sin importar mayúsculas ni acentos, y el pedido guarda 
 
 1. **Sincronizar** (`scripts/sincronizar-api.mjs`): pedir `/api/velas/presentaciones` con `pedirOpcional` (una API vieja responde `404`) y guardar en `catalogo-api.json` un `velas` con las **disponibles**: `{ presentaciones: [{ tipo, nombre, gramos, precio, marmoleable, orden }] }`, o `null` si no hay.
 2. **Esquemas** (`src/domain/catalogo.ts`): agregar `velas-recipiente`, `velas-molde` y `velas-jicara` a `FotoApiSchema.categoria`, y `velas` (nullable, por defecto `null`) a `CatalogoApiJsonSchema`.
-3. **Repositorio** (`CatalogoRepository` / `CatalogoArchivosLocales`): exponer las presentaciones por tipo, los colores y aromas de vela (los de `kits` con `enVela`) y las fotos de cada tipo.
+3. **Repositorio** (`CatalogoRepository` / `CatalogoArchivosLocales`): exponer las presentaciones por tipo, los colores de vela (`pieza: "vela"`) y los aromas de vela (los de `kits` con `enVela`) y las fotos de cada tipo.
 4. **Página de velas**: elegir tipo → presentación (con gramos y precio si hay) → color → aroma → topping; la casilla "Marmoleada" solo cuando la presentación es `marmoleable` (nunca en jícara), y al marcarla, elegir el segundo color. Mostrar las fotos del tipo elegido. Enviar a `POST /api/velas/pedidos` y mostrar `message` si responde `400`/`429`.
 
 ## Desarrollo local

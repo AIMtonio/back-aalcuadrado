@@ -7,7 +7,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import type { Repository } from 'typeorm';
 import { sinIndefinidos } from '../comun/sin-indefinidos.js';
-import { KitAroma, KitColor } from '../kits/opciones-kit.entity.js';
+import { ColoresService } from '../colores/colores.service.js';
+import { KitAroma } from '../kits/opciones-kit.entity.js';
 import type { CrearPedidoVelaDto } from './dto/crear-pedido-vela.dto.js';
 import type {
   ActualizarPresentacionDto,
@@ -28,8 +29,8 @@ const mismoNombre = (a: string, b: string) =>
 
 /**
  * Velas individuales personalizadas: sus presentaciones (tamaños y moldes de
- * cada tipo) y los pedidos que llegan del front. Los colores y aromas son los
- * de los kits marcados "para la vela".
+ * cada tipo) y los pedidos que llegan del front. Los colores son los de vela
+ * (pestaña Colores) y los aromas, los de los kits marcados "para la vela".
  */
 @Injectable()
 export class VelasService {
@@ -38,7 +39,7 @@ export class VelasService {
     private readonly presentaciones: Repository<PresentacionVela>,
     @InjectRepository(PedidoVela)
     private readonly pedidos: Repository<PedidoVela>,
-    @InjectRepository(KitColor) private readonly colores: Repository<KitColor>,
+    private readonly colores: ColoresService,
     @InjectRepository(KitAroma) private readonly aromas: Repository<KitAroma>,
   ) {}
 
@@ -147,7 +148,7 @@ export class VelasService {
     }
 
     const [colores, aromas] = await Promise.all([
-      this.colores.find({ where: { enVela: true, disponible: true } }),
+      this.colores.disponibles('vela'),
       this.aromas.find({ where: { enVela: true, disponible: true } }),
     ]);
     const elegir = (

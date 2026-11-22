@@ -96,8 +96,12 @@ docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < da
 docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/05_pedidos_kits.sql
 docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/06_kits_opciones.sql
 docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/07_velas.sql
+docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/08_precios_velas.sql
+docker compose exec -T db sh -c 'mariadb -uroot -p"$MARIADB_ROOT_PASSWORD"' < database/09_colores_por_pieza.sql
 docker compose exec -T db sh -c '/docker-entrypoint-initdb.d/02_usuario_api.sh'
 ```
+
+`09` separa los colores en jabón y vela (tabla `colores`) y debe correr **antes** de `02_usuario_api.sh`, que ya da permisos sobre `colores`.
 
 ## Respaldos
 

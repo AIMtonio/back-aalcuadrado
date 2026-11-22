@@ -109,22 +109,24 @@ CREATE TABLE IF NOT EXISTS pedidos_kits (
   KEY idx_pedidos_kits_creado_en (creado_en)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Colores y aromas para armar los kits (jabón + vela), administrados desde el panel
--- (pestaña Kits). Los pedidos guardan el nombre elegido, no el id.
-CREATE TABLE IF NOT EXISTS kit_colores (
+-- Colores, en dos listas separadas (pestaña Colores del panel): los de jabón salen en el
+-- jabón del kit; los de vela, en la vela del kit y en las velas individuales. El mismo
+-- nombre puede estar en las dos. Los pedidos guardan el nombre elegido, no el id.
+CREATE TABLE IF NOT EXISTS colores (
   id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  pieza           ENUM('jabon', 'vela') NOT NULL,
   nombre          VARCHAR(60)   NOT NULL,
   hex             VARCHAR(7)    NOT NULL COMMENT '#RRGGBB',
-  en_jabon        TINYINT(1)    NOT NULL DEFAULT 1,
-  en_vela         TINYINT(1)    NOT NULL DEFAULT 1,
   disponible      TINYINT(1)    NOT NULL DEFAULT 1,
   orden           INT           NOT NULL DEFAULT 0,
   creado_en       DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   actualizado_en  DATETIME(6)   NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
-  UNIQUE KEY uq_kit_colores_nombre (nombre)
+  UNIQUE KEY uq_colores_pieza_nombre (pieza, nombre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Aromas para armar los kits (jabón + vela) y las velas, administrados desde el panel
+-- (pestaña Kits). Los pedidos guardan el nombre elegido, no el id.
 CREATE TABLE IF NOT EXISTS kit_aromas (
   id              INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   nombre          VARCHAR(60)   NOT NULL,

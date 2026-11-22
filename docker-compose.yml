@@ -23,6 +23,7 @@ services:
       - ./database/03_productos_iniciales.sql:/docker-entrypoint-initdb.d/03_productos_iniciales.sql:ro
       - ./database/06_kits_opciones.sql:/docker-entrypoint-initdb.d/04_kits_opciones.sql:ro
       - ./database/07_velas.sql:/docker-entrypoint-initdb.d/05_velas.sql:ro
+      - ./database/09_colores_por_pieza.sql:/docker-entrypoint-initdb.d/06_colores_por_pieza.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
