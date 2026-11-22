@@ -36,6 +36,7 @@
           <button type="button" class="pestana" data-pestana="categorias">Categorías</button>
           <button type="button" class="pestana" data-pestana="galeria">Así se ven</button>
           <button type="button" class="pestana" data-pestana="kits">Kits</button>
+          <button type="button" class="pestana" data-pestana="colores">Colores</button>
           <button type="button" class="pestana" data-pestana="velas">Velas</button>
           <button type="button" class="pestana" data-pestana="pedidos">Pedidos</button>
         </nav>
@@ -170,23 +171,39 @@
           <ol class="rejilla" id="rejilla-fotos-kits"></ol>
         </section>
 
-        <section aria-labelledby="titulo-colores-kit">
-          <div class="barra">
-            <h2 id="titulo-colores-kit">Colores <span id="total-colores-kit" class="contador"></span></h2>
-            <button type="button" class="boton" data-nueva-opcion="color">Nuevo color</button>
-          </div>
-          <p class="nota">Los colores que tienes para el jabón y la vela. Desmarca "Disponible" cuando se te acabe uno.</p>
-          <p class="vacio" id="vacio-colores-kit" hidden>Todavía no hay colores: el sitio usa los de su configuración.</p>
-          <ul class="rejilla rejilla--opciones" id="rejilla-colores-kit"></ul>
-        </section>
-
         <section aria-labelledby="titulo-aromas-kit">
           <div class="barra">
             <h2 id="titulo-aromas-kit">Aromas <span id="total-aromas-kit" class="contador"></span></h2>
             <button type="button" class="boton" data-nueva-opcion="aroma">Nuevo aroma</button>
           </div>
+          <p class="nota">Los colores de jabón y de vela están en la pestaña Colores.</p>
           <p class="vacio" id="vacio-aromas-kit" hidden>Todavía no hay aromas: el sitio usa los de su configuración.</p>
           <ul class="rejilla rejilla--opciones" id="rejilla-aromas-kit"></ul>
+        </section>
+      </main>
+
+      <main class="contenido" id="pestana-colores" hidden>
+        <section aria-labelledby="titulo-colores-jabon">
+          <div class="barra">
+            <h2 id="titulo-colores-jabon">Colores de jabón <span id="total-colores-jabon" class="contador"></span></h2>
+            <button type="button" class="boton" data-nuevo-color="jabon">Nuevo color de jabón</button>
+          </div>
+          <p class="nota">Los que salen en el jabón de los kits. Desmarca "Disponible" cuando se te acabe uno.</p>
+          <p class="vacio" id="vacio-colores-jabon" hidden>Todavía no hay colores de jabón: el sitio usa los de su configuración.</p>
+          <ul class="rejilla rejilla--opciones" id="rejilla-colores-jabon"></ul>
+        </section>
+
+        <section aria-labelledby="titulo-colores-vela">
+          <div class="barra">
+            <h2 id="titulo-colores-vela">Colores de vela <span id="total-colores-vela" class="contador"></span></h2>
+            <button type="button" class="boton" data-nuevo-color="vela">Nuevo color de vela</button>
+          </div>
+          <p class="nota">
+            Los que salen en la vela de los kits y en las velas individuales (también para el marmoleado). Pueden
+            llamarse igual que uno de jabón y tener otro tono.
+          </p>
+          <p class="vacio" id="vacio-colores-vela" hidden>Todavía no hay colores de vela: el sitio usa los de su configuración.</p>
+          <ul class="rejilla rejilla--opciones" id="rejilla-colores-vela"></ul>
         </section>
       </main>
 
@@ -198,7 +215,7 @@
           </div>
           <p class="nota">
             Lo que se puede pedir de cada tipo de vela. Pon los gramos y el precio cuando los tengas y desmarca "Disponible"
-            si dejas de hacer alguna. Los colores y aromas son los de la pestaña Kits marcados para la vela.
+            si dejas de hacer alguna. Los colores son los de vela (pestaña Colores) y los aromas, los de la pestaña Kits marcados para la vela.
           </p>
           <p class="vacio" id="vacio-presentaciones" hidden>
             Todavía no hay presentaciones: corre database/07_velas.sql o agrégalas aquí.
@@ -600,17 +617,13 @@
     <dialog id="dialogo-opcion" class="dialogo tarjeta" aria-labelledby="titulo-opcion">
       <form id="form-opcion" novalidate>
         <div class="dialogo__encabezado">
-          <h2 id="titulo-opcion">Nuevo color</h2>
+          <h2 id="titulo-opcion">Nuevo aroma</h2>
           <button type="button" class="enlace" data-cerrar aria-label="Cerrar">✕</button>
         </div>
         <div class="campos">
           <label>
             Nombre
-            <input name="nombre" required maxlength="60" placeholder="Rojo navidad" />
-          </label>
-          <label data-solo-color>
-            Color
-            <input name="hex" type="color" value="#B3202A" />
+            <input name="nombre" required maxlength="60" placeholder="Canela" />
           </label>
           <label>
             <span>Orden <small>(opcional; el más bajo sale primero)</small></span>
@@ -630,6 +643,38 @@
         <div class="dialogo__acciones">
           <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
           <button type="submit" class="boton" id="boton-guardar-opcion">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="dialogo-color" class="dialogo tarjeta" aria-labelledby="titulo-color">
+      <form id="form-color" novalidate>
+        <div class="dialogo__encabezado">
+          <h2 id="titulo-color">Nuevo color</h2>
+          <button type="button" class="enlace" data-cerrar aria-label="Cerrar">✕</button>
+        </div>
+        <div class="campos">
+          <label>
+            Nombre
+            <input name="nombre" required maxlength="60" placeholder="Rojo navidad" />
+          </label>
+          <label>
+            Color
+            <input name="hex" type="color" value="#B3202A" />
+          </label>
+          <label>
+            <span>Orden <small>(opcional; el más bajo sale primero)</small></span>
+            <input name="orden" type="number" step="1" />
+          </label>
+          <label class="casilla campos__ancho">
+            <input type="checkbox" name="disponible" checked />
+            Disponible <small>(si no, no sale en el sitio)</small>
+          </label>
+        </div>
+        <p class="error" id="error-color" role="alert"></p>
+        <div class="dialogo__acciones">
+          <button type="button" class="boton boton--secundario" data-cerrar>Cancelar</button>
+          <button type="submit" class="boton" id="boton-guardar-color">Guardar</button>
         </div>
       </form>
     </dialog>

@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-/** Lo que comparten colores y aromas: para qué pieza del kit sirven y si se ofrecen. */
+/** Lo que tiene una opción de kit: para qué pieza sirve y si se ofrece. */
 abstract class OpcionKit {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id: number;
@@ -35,14 +35,6 @@ abstract class OpcionKit {
 
   @UpdateDateColumn({ name: 'actualizado_en', type: 'datetime', precision: 6 })
   actualizadoEn: Date;
-}
-
-/** Tabla `kit_colores`. Debe coincidir con database/01_crear_base_de_datos.sql. */
-@Entity('kit_colores')
-export class KitColor extends OpcionKit {
-  /** `#RRGGBB`, en mayúsculas. */
-  @Column({ type: 'varchar', length: 7 })
-  hex: string;
 }
 
 /** Tabla `kit_aromas`. Debe coincidir con database/01_crear_base_de_datos.sql. */

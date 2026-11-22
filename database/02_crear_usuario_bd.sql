@@ -39,8 +39,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.categorias TO 'aalcuadrado_a
 GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO 'aalcuadrado_api'@'localhost';
 GRANT SELECT, INSERT, DELETE ON aalcuadrado.pedidos_kits TO 'aalcuadrado_api'@'127.0.0.1';
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_colores TO 'aalcuadrado_api'@'127.0.0.1';
+-- colores (de jabón y de vela) y kit_aromas: lectura y escritura completas (pestañas Colores y Kits).
+-- `kit_colores` ya no la usa la API: sus colores se pasaron a `colores` (09_colores_por_pieza.sql).
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.colores TO 'aalcuadrado_api'@'localhost';
+GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.colores TO 'aalcuadrado_api'@'127.0.0.1';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'localhost';
 GRANT SELECT, INSERT, UPDATE, DELETE ON aalcuadrado.kit_aromas TO 'aalcuadrado_api'@'127.0.0.1';
 

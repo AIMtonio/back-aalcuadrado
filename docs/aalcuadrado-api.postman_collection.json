@@ -876,8 +876,8 @@
       ]
     },
     {
-      "name": "Kits (colores y aromas)",
-      "description": "Colores y aromas para armar kits de jabón y vela. Piden token. Las fotos de kits se suben en Imágenes con categoria=kits.",
+      "name": "Colores (jabón y vela)",
+      "description": "Dos listas separadas: pieza=jabon (jabón del kit) y pieza=vela (vela del kit y velas individuales). Piden token.",
       "item": [
         {
           "name": "Listar colores",
@@ -885,17 +885,22 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/kits/colores",
+              "raw": "{{baseUrl}}/api/colores?pieza=vela",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "kits",
                 "colores"
+              ],
+              "query": [
+                {
+                  "key": "pieza",
+                  "value": "vela"
+                }
               ]
             },
-            "description": "Por orden y nombre, incluidos los no disponibles."
+            "description": "Primero los de jabón y luego los de vela; por orden y nombre, incluidos los no disponibles. `pieza` es opcional (jabon o vela)."
           }
         },
         {
@@ -909,20 +914,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/kits/colores",
+              "raw": "{{baseUrl}}/api/colores",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "kits",
                 "colores"
               ]
             },
-            "description": "201. 409 si ya existe uno con ese nombre (sin importar mayúsculas ni acentos). 400 si no es para jabón ni para vela.",
+            "description": "201. 409 si esa pieza ya tiene uno con ese nombre (sin importar mayúsculas ni acentos); la otra pieza sí puede tenerlo.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Rojo navidad\",\n  \"hex\": \"#B3202A\",\n  \"enJabon\": true,\n  \"enVela\": true,\n  \"disponible\": true,\n  \"orden\": 0\n}",
+              "raw": "{\n  \"pieza\": \"vela\",\n  \"nombre\": \"Rojo navidad\",\n  \"hex\": \"#B3202A\",\n  \"disponible\": true,\n  \"orden\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -942,18 +946,17 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/kits/colores/1",
+              "raw": "{{baseUrl}}/api/colores/1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "kits",
                 "colores",
                 "1"
               ]
             },
-            "description": "Solo los campos que cambian.",
+            "description": "Solo los campos que cambian. `pieza` no se puede cambiar.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"disponible\": false\n}",
@@ -971,13 +974,12 @@
             "method": "DELETE",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/kits/colores/1",
+              "raw": "{{baseUrl}}/api/colores/1",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "kits",
                 "colores",
                 "1"
               ]
@@ -985,6 +987,31 @@
             "description": "204."
           }
         },
+        {
+          "name": "Colores de kits (compatibilidad)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/kits/colores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "kits",
+                "colores"
+              ]
+            },
+            "description": "Solo lectura: la lista de /api/colores con enJabon / enVela según la pieza, como la leía el front antes. Se quitará cuando el front use /api/colores."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Kits (aromas)",
+      "description": "Aromas para armar kits de jabón y vela (y las velas). Piden token. Los colores están en Colores. Las fotos de kits se suben en Imágenes con categoria=kits.",
+      "item": [
         {
           "name": "Listar aromas",
           "request": {

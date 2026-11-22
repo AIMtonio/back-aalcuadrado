@@ -9,7 +9,8 @@ API de [aalcuadrado](https://github.com/AIMtonio/front-aalcuadrado) hecha con Ne
 - **Categorías de aretes** (tabla `categorias`), para agrupar los productos como quieras desde el panel.
 - **Fotos en disco**, en `UPLOADS_DIR/<categoria>/`, servidas en `/uploads/...` y registradas en la tabla `imagenes`. Cada foto de producto apunta a un producto y color que existen.
 - **Pedidos de kits** (jabón + vela, tabla `pedidos_kits`): el sitio está creciendo de aretes a también vender estos kits a la medida. El front manda el pedido (`POST /api/pedidos`, pública) y el dueño lo ve en el panel para cotizarlo y hacerlo a mano.
-- **Colores y aromas de kits** (tablas `kit_colores` y `kit_aromas`), para jabón, vela o ambos, que se marcan como disponibles o no desde la pestaña **Kits** del panel. Ahí mismo se suben las **fotos de kits** (categoría `kits`), que salen en la página de kits del sitio.
+- **Colores de jabón y de vela** (tabla `colores`), en dos listas separadas que se administran desde la pestaña **Colores** del panel: los de jabón salen en el jabón del kit; los de vela, en la vela del kit y en las velas individuales. El mismo nombre puede estar en las dos con distinto tono.
+- **Aromas de kits** (tabla `kit_aromas`), para jabón, vela o ambos, que se marcan como disponibles o no desde la pestaña **Kits** del panel. Ahí mismo se suben las **fotos de kits** (categoría `kits`), que salen en la página de kits del sitio.
 - **Velas personalizadas** (tablas `velas_presentaciones` y `pedidos_velas`): en recipiente (pequeña, mediana, grande; se pueden marmolear), de molde (cupcake) o en jícara (sin marmoleado). Los tamaños, moldes, gramos, precios y fotos de cada tipo (categorías `velas-recipiente`, `velas-molde`, `velas-jicara`) se administran en la pestaña **Velas** del panel; el front manda los pedidos a `POST /api/velas/pedidos` (pública) y salen en la pestaña **Pedidos**.
 
 ## Estructura
@@ -20,6 +21,8 @@ src/
   usuarios/    tabla usuarios, perfil y cambio de contraseña
   productos/   tablas productos y producto_colores, alta, edición y borrado
   categorias/  tabla categorias, alta, edición y borrado
+  colores/     tabla colores: colores de jabón y de vela, en listas separadas
+  kits/        tabla kit_aromas: aromas para kits y velas
   imagenes/    tabla imagenes, subida (multipart), edición y borrado
   pedidos/     tabla pedidos_kits: alta pública, listado y borrado para el panel
   velas/       tablas velas_presentaciones y pedidos_velas: tamaños y moldes, pedidos de velas
@@ -66,9 +69,9 @@ Abre <http://localhost:3000/panel/>.
 
 ## Base de datos
 
-Las tablas las crean los scripts de `database/`, no la API (`synchronize: false`). El usuario de base de datos de la API solo tiene `SELECT, INSERT, UPDATE` en `usuarios`; `SELECT, INSERT, UPDATE, DELETE` en `imagenes`, `productos`, `producto_colores` y `categorias`; `SELECT, INSERT, UPDATE, DELETE` en `kit_colores`, `kit_aromas` y `velas_presentaciones`; y `SELECT, INSERT, DELETE` en `pedidos_kits` y `pedidos_velas` (el panel no edita un pedido, solo lo borra al cotizarlo). Si agregas una tabla, agrégale su script y sus permisos.
+Las tablas las crean los scripts de `database/`, no la API (`synchronize: false`). El usuario de base de datos de la API solo tiene `SELECT, INSERT, UPDATE` en `usuarios`; `SELECT, INSERT, UPDATE, DELETE` en `imagenes`, `productos`, `producto_colores` y `categorias`; `SELECT, INSERT, UPDATE, DELETE` en `colores`, `kit_aromas` y `velas_presentaciones`; y `SELECT, INSERT, DELETE` en `pedidos_kits` y `pedidos_velas` (el panel no edita un pedido, solo lo borra al cotizarlo). Si agregas una tabla, agrégale su script y sus permisos.
 
-`01_crear_base_de_datos.sql` ya crea todas las tablas (instalación nueva). Si tu base es anterior a `categorias`, `pedidos_kits`, los kits o las velas, corre además `04_categorias.sql`, `05_pedidos_kits.sql`, `06_kits_opciones.sql`, `07_velas.sql` y `08_precios_velas.sql` (y vuelve a correr `02_crear_usuario_bd.sql` para los permisos nuevos); todos se pueden repetir sin dañar lo que ya existe. `06` también carga los colores y aromas que el sitio tenía fijos, y `07` las presentaciones de velas (con los gramos pendientes); `08` agrega los precios de velas (pendientes hasta que los pongas en el panel).
+`01_crear_base_de_datos.sql` ya crea todas las tablas (instalación nueva). Si tu base es anterior a `categorias`, `pedidos_kits`, los kits o las velas, corre además `04_categorias.sql`, `05_pedidos_kits.sql`, `06_kits_opciones.sql`, `07_velas.sql`, `08_precios_velas.sql` y `09_colores_por_pieza.sql` (y vuelve a correr `02_crear_usuario_bd.sql` para los permisos nuevos); todos se pueden repetir sin dañar lo que ya existe. `06` también carga los colores y aromas que el sitio tenía fijos, y `07` las presentaciones de velas (con los gramos pendientes); `08` agrega los precios de velas (pendientes hasta que los pongas en el panel), y `09` separa los colores en jabón y vela: pasa los de `kit_colores` a `colores` (uno marcado para las dos piezas queda en ambas listas) y deja `kit_colores` sin usar, para que la borres cuando revises que todo quedó bien. En una instalación nueva, corre `06` y luego `09` para cargar los colores iniciales.
 
 ## Despliegue
 

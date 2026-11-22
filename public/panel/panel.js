@@ -1,6 +1,6 @@
 // Panel de aalcuadrado: inicia sesión, administra productos y sube fotos
 // (de productos, de la sección "Así se ven", de kits y de velas). También los
-// colores y aromas para armar kits, y los tamaños y moldes de las velas.
+// colores de jabón y de vela, los aromas, y los tamaños y moldes de las velas.
 // Habla con la API del mismo dominio (/api). El token vive en sessionStorage:
 // se borra al cerrar la pestaña.
 
@@ -31,6 +31,8 @@ const dialogoEditar = $('#dialogo-editar');
 const dialogoProducto = $('#dialogo-producto');
 const dialogoCategoria = $('#dialogo-categoria');
 const dialogoOpcion = $('#dialogo-opcion');
+const formColor = $('#form-color');
+const dialogoColor = $('#dialogo-color');
 const formPresentacion = $('#form-presentacion');
 const dialogoPresentacion = $('#dialogo-presentacion');
 const inputArchivos = formSubir.elements.archivos;
@@ -122,7 +124,15 @@ function cerrarSesion(mensaje = '') {
   rejillaPedidosVelas.replaceChildren();
   for (const tipo of Object.keys(TIPOS_VELA)) $(`#rejilla-velas-${tipo}`).replaceChildren();
   for (const tipo of Object.values(TIPOS_OPCION)) tipo.rejilla.replaceChildren();
-  for (const dialogo of [dialogoEditar, dialogoProducto, dialogoCategoria, dialogoOpcion, dialogoPresentacion]) {
+  for (const pieza of Object.values(PIEZAS)) pieza.rejilla.replaceChildren();
+  for (const dialogo of [
+    dialogoEditar,
+    dialogoProducto,
+    dialogoCategoria,
+    dialogoOpcion,
+    dialogoColor,
+    dialogoPresentacion,
+  ]) {
     if (dialogo.open) dialogo.close();
   }
   $('#error-login').textContent = mensaje;
@@ -142,6 +152,7 @@ async function entrarAlPanel() {
     cargarFotosKits(),
     cargarFotosVelas(),
     cargarOpcionesKit(),
+    cargarColores(),
     cargarPresentaciones(),
     cargarPedidos(),
     cargarPedidosVelas(),
@@ -186,6 +197,7 @@ function cambiarPestana(nombre) {
   $('#pestana-categorias').hidden = nombre !== 'categorias';
   $('#pestana-galeria').hidden = nombre !== 'galeria';
   $('#pestana-kits').hidden = nombre !== 'kits';
+  $('#pestana-colores').hidden = nombre !== 'colores';
   $('#pestana-velas').hidden = nombre !== 'velas';
   $('#pestana-pedidos').hidden = nombre !== 'pedidos';
   escribir(CLAVE_PESTANA, nombre);
@@ -1155,20 +1167,10 @@ const cargasVelas = Object.keys(TIPOS_VELA).map((tipo) =>
 );
 const cargarFotosVelas = () => Promise.all(cargasVelas.map((cargar) => cargar()));
 
-/* ---------- Colores y aromas de kits ---------- */
+/* ---------- Aromas de kits ---------- */
 
-/** Lo que cambia entre colores y aromas: ruta de la API, textos y dónde se pintan. */
+/** Ruta de la API, textos y dónde se pintan. Los colores tienen su propia pestaña (más abajo). */
 const TIPOS_OPCION = {
-  color: {
-    ruta: '/kits/colores',
-    nuevo: 'Nuevo color',
-    nombre: 'color',
-    placeholder: 'Rojo navidad',
-    rejilla: $('#rejilla-colores-kit'),
-    total: $('#total-colores-kit'),
-    vacio: $('#vacio-colores-kit'),
-    lista: [],
-  },
   aroma: {
     ruta: '/kits/aromas',
     nuevo: 'Nuevo aroma',
@@ -1198,12 +1200,6 @@ function pintarOpciones(clave) {
       const nodo = plantilla.content.firstElementChild.cloneNode(true);
       nodo.classList.toggle('opcion--agotada', !opcion.disponible);
       $('.opcion__nombre', nodo).textContent = opcion.nombre;
-      if (opcion.hex) {
-        const muestra = $('.opcion__muestra', nodo);
-        muestra.hidden = false;
-        muestra.style.background = opcion.hex;
-        muestra.title = opcion.hex;
-      }
       const piezas = [opcion.enJabon && 'Jabón', opcion.enVela && 'Vela'].filter(Boolean).join(' y ');
       const insignias = [piezas, !opcion.disponible && 'No disponible', opcion.orden !== 0 && `orden ${opcion.orden}`];
       $('.opcion__insignias', nodo).replaceChildren(
@@ -1224,7 +1220,7 @@ function pintarOpciones(clave) {
   tipo.vacio.hidden = tipo.lista.length > 0;
 }
 
-/** Qué se está editando en el diálogo: `{ clave: 'color' | 'aroma', opcion: {...} | null }`. */
+/** Qué se está editando en el diálogo: `{ clave: 'aroma', opcion: {...} | null }`. */
 let opcionEditando = null;
 
 for (const boton of document.querySelectorAll('[data-nueva-opcion]')) {
@@ -1239,12 +1235,8 @@ function abrirOpcion(clave, opcion) {
   $('#titulo-opcion').textContent = opcion ? `Editar ${opcion.nombre}` : tipo.nuevo;
   const campos = formOpcion.elements;
   campos.nombre.placeholder = tipo.placeholder;
-  const esColor = clave === 'color';
-  $('[data-solo-color]', formOpcion).hidden = !esColor;
-  campos.hex.disabled = !esColor;
   if (opcion) {
     campos.nombre.value = opcion.nombre;
-    if (esColor) campos.hex.value = opcion.hex;
     campos.orden.value = opcion.orden || '';
     campos.enJabon.checked = opcion.enJabon;
     campos.enVela.checked = opcion.enVela;
@@ -1273,7 +1265,6 @@ formOpcion.addEventListener('submit', async (evento) => {
   const tipo = TIPOS_OPCION[clave];
   const datos = {
     nombre: campos.nombre.value.trim(),
-    ...(clave === 'color' && { hex: campos.hex.value.toUpperCase() }),
     orden: Number(campos.orden.value || 0),
     enJabon: campos.enJabon.checked,
     enVela: campos.enVela.checked,
@@ -1305,6 +1296,137 @@ async function borrarOpcion(clave, opcion) {
     await api(`${TIPOS_OPCION[clave].ruta}/${opcion.id}`, { method: 'DELETE' });
     avisar('Borrado');
     await cargarOpcionesKit();
+  } catch (e) {
+    avisar(e.message);
+  }
+}
+
+/* ---------- Colores de jabón y de vela ---------- */
+
+/** Cada pieza tiene su lista de colores, como en la API (src/colores/piezas.ts). */
+const PIEZAS = {
+  jabon: {
+    nombre: 'jabón',
+    rejilla: $('#rejilla-colores-jabon'),
+    total: $('#total-colores-jabon'),
+    vacio: $('#vacio-colores-jabon'),
+  },
+  vela: {
+    nombre: 'vela',
+    rejilla: $('#rejilla-colores-vela'),
+    total: $('#total-colores-vela'),
+    vacio: $('#vacio-colores-vela'),
+  },
+};
+
+let colores = [];
+
+async function cargarColores() {
+  colores = await api('/colores');
+  for (const pieza of Object.keys(PIEZAS)) pintarColores(pieza);
+}
+
+function pintarColores(pieza) {
+  const { rejilla: destino, total, vacio } = PIEZAS[pieza];
+  const lista = colores.filter((color) => color.pieza === pieza);
+  const plantilla = $('#plantilla-opcion');
+  destino.replaceChildren(
+    ...lista.map((color) => {
+      const nodo = plantilla.content.firstElementChild.cloneNode(true);
+      nodo.classList.toggle('opcion--agotada', !color.disponible);
+      $('.opcion__nombre', nodo).textContent = color.nombre;
+      const muestra = $('.opcion__muestra', nodo);
+      muestra.hidden = false;
+      muestra.style.background = color.hex;
+      muestra.title = color.hex;
+      const insignias = [color.hex, !color.disponible && 'No disponible', color.orden !== 0 && `orden ${color.orden}`];
+      $('.opcion__insignias', nodo).replaceChildren(
+        ...insignias.filter(Boolean).map((texto) => {
+          const span = document.createElement('span');
+          span.className = 'insignia';
+          if (texto === 'No disponible') span.classList.add('insignia--alerta');
+          span.textContent = texto;
+          return span;
+        }),
+      );
+      $('[data-accion="editar"]', nodo).addEventListener('click', () => abrirColor(pieza, color));
+      $('[data-accion="borrar"]', nodo).addEventListener('click', () => borrarColor(color));
+      return nodo;
+    }),
+  );
+  total.textContent = `(${lista.length})`;
+  vacio.hidden = lista.length > 0;
+}
+
+/** Qué se está editando en el diálogo: `{ pieza: 'jabon' | 'vela', color: {...} | null }`. */
+let colorEditando = null;
+
+for (const boton of document.querySelectorAll('[data-nuevo-color]')) {
+  boton.addEventListener('click', () => abrirColor(boton.dataset.nuevoColor, null));
+}
+
+function abrirColor(pieza, color) {
+  colorEditando = { pieza, color };
+  formColor.reset();
+  $('#error-color').textContent = '';
+  $('#titulo-color').textContent = color
+    ? `Editar ${color.nombre} (${PIEZAS[pieza].nombre})`
+    : `Nuevo color de ${PIEZAS[pieza].nombre}`;
+  const campos = formColor.elements;
+  if (color) {
+    campos.nombre.value = color.nombre;
+    campos.hex.value = color.hex;
+    campos.orden.value = color.orden || '';
+    campos.disponible.checked = color.disponible;
+  }
+  dialogoColor.showModal();
+  campos.nombre.focus();
+}
+
+for (const boton of dialogoColor.querySelectorAll('[data-cerrar]')) {
+  boton.addEventListener('click', () => dialogoColor.close());
+}
+
+formColor.addEventListener('submit', async (evento) => {
+  evento.preventDefault();
+  const error = $('#error-color');
+  error.textContent = '';
+  if (!formColor.reportValidity() || !colorEditando) return;
+
+  const campos = formColor.elements;
+  const { pieza, color } = colorEditando;
+  const datos = {
+    ...(!color && { pieza }),
+    nombre: campos.nombre.value.trim(),
+    hex: campos.hex.value.toUpperCase(),
+    orden: Number(campos.orden.value || 0),
+    disponible: campos.disponible.checked,
+  };
+
+  const boton = $('#boton-guardar-color');
+  boton.disabled = true;
+  try {
+    color
+      ? await api(`/colores/${color.id}`, { method: 'PATCH', json: datos })
+      : await api('/colores', { method: 'POST', json: datos });
+    dialogoColor.close();
+    avisar(color ? 'Cambios guardados' : `"${datos.nombre}" agregado a ${PIEZAS[pieza].nombre}`);
+    await cargarColores();
+  } catch (e) {
+    error.textContent = e.message;
+  } finally {
+    boton.disabled = false;
+  }
+});
+
+async function borrarColor(color) {
+  const consejo = color.disponible ? ' Si solo se te acabó, mejor edítalo y desmarca "Disponible".' : '';
+  const pieza = PIEZAS[color.pieza].nombre;
+  if (!window.confirm(`¿Borrar el color de ${pieza} "${color.nombre}"? No se puede deshacer.${consejo}`)) return;
+  try {
+    await api(`/colores/${color.id}`, { method: 'DELETE' });
+    avisar('Borrado');
+    await cargarColores();
   } catch (e) {
     avisar(e.message);
   }

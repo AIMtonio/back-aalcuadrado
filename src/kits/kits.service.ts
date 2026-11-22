@@ -9,65 +9,39 @@ import type { FindOptionsWhere, Repository } from 'typeorm';
 import { sinIndefinidos } from '../comun/sin-indefinidos.js';
 import type {
   ActualizarAromaDto,
-  ActualizarColorDto,
   CrearAromaDto,
-  CrearColorDto,
 } from './dto/datos-opcion.dto.js';
-import { KitAroma, KitColor } from './opciones-kit.entity.js';
+import { KitAroma } from './opciones-kit.entity.js';
 
-type Opcion = KitColor | KitAroma;
+type Opcion = KitAroma;
 
 /** Cómo se nombra cada tipo en los mensajes de error. */
 const NOMBRES = {
-  color: { el: 'el color', un: 'un color' },
   aroma: { el: 'el aroma', un: 'un aroma' },
 } as const;
 
 /**
- * Colores y aromas que se pueden elegir al armar un kit (jabón + vela).
+ * Aromas que se pueden elegir al armar un kit (jabón + vela). Los colores
+ * viven aparte (módulo `colores`), una lista por pieza.
  * Los pedidos guardan el nombre, no el id: borrar o renombrar una opción no
  * cambia los pedidos que ya llegaron.
  */
 @Injectable()
 export class KitsService {
   constructor(
-    @InjectRepository(KitColor) private readonly colores: Repository<KitColor>,
     @InjectRepository(KitAroma) private readonly aromas: Repository<KitAroma>,
   ) {}
 
-  listarColores(): Promise<KitColor[]> {
-    return this.colores.find({ order: { orden: 'ASC', nombre: 'ASC' } });
-  }
-
   listarAromas(): Promise<KitAroma[]> {
     return this.aromas.find({ order: { orden: 'ASC', nombre: 'ASC' } });
-  }
-
-  crearColor(datos: CrearColorDto): Promise<KitColor> {
-    return this.crear(this.colores, 'color', {
-      ...this.base(datos),
-      hex: datos.hex.toUpperCase(),
-    });
   }
 
   crearAroma(datos: CrearAromaDto): Promise<KitAroma> {
     return this.crear(this.aromas, 'aroma', this.base(datos));
   }
 
-  actualizarColor(id: number, cambios: ActualizarColorDto): Promise<KitColor> {
-    return this.actualizar(this.colores, 'color', id, {
-      ...cambios,
-      ...(cambios.hex !== undefined && { hex: cambios.hex.toUpperCase() }),
-    });
-  }
-
   actualizarAroma(id: number, cambios: ActualizarAromaDto): Promise<KitAroma> {
     return this.actualizar(this.aromas, 'aroma', id, cambios);
-  }
-
-  async eliminarColor(id: number): Promise<void> {
-    await this.buscar(this.colores, 'color', id);
-    await this.colores.delete({ id });
   }
 
   async eliminarAroma(id: number): Promise<void> {

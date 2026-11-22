@@ -670,83 +670,127 @@ describe('API (e2e)', () => {
     expect(fin.body).toEqual({ disponible: false, restantesHoy: 0 });
   });
 
-  it('administra los colores y aromas de los kits', async () => {
+  it('administra los colores de jabón y de vela en listas separadas', async () => {
     const auth = { Authorization: `Bearer ${token}` };
-    await request(http).get('/api/kits/colores').expect(401);
+    await request(http).get('/api/colores').expect(401);
+    const crear = (datos: Record<string, unknown>) =>
+      request(http).post('/api/colores').set(auth).send(datos);
 
-    const rojo = await request(http)
-      .post('/api/kits/colores')
-      .set(auth)
-      .send({ nombre: '  Rojo   navidad ', hex: '#b3202a', enVela: false })
-      .expect(201);
-    expect(rojo.body).toMatchObject({
+    const rojoJabon = await crear({
+      pieza: 'jabon',
+      nombre: '  Rojo   navidad ',
+      hex: '#b3202a',
+    }).expect(201);
+    expect(rojoJabon.body).toMatchObject({
+      pieza: 'jabon',
       nombre: 'Rojo navidad',
       hex: '#B3202A',
-      enJabon: true,
-      enVela: false,
       disponible: true,
       orden: 0,
     });
+    // El mismo nombre en la otra pieza sí se puede, con otro tono; en la misma no.
+    const rojoVela = await crear({
+      pieza: 'vela',
+      nombre: 'Rojo navidad',
+      hex: '#8a1820',
+    }).expect(201);
+    await crear({
+      pieza: 'vela',
+      nombre: 'ROJO NAVIDAD',
+      hex: '#000000',
+    }).expect(409);
 
-    // Validaciones: hex, nombre repetido (sin importar mayúsculas) y al menos una pieza.
-    await request(http)
-      .post('/api/kits/colores')
-      .set(auth)
-      .send({ nombre: 'Verde', hex: 'verde' })
-      .expect(400);
-    await request(http)
-      .post('/api/kits/colores')
-      .set(auth)
-      .send({ nombre: 'ROJO NAVIDAD', hex: '#000000' })
-      .expect(409);
-    const sinPieza = await request(http)
-      .post('/api/kits/colores')
-      .set(auth)
-      .send({ nombre: 'Gris', hex: '#888888', enJabon: false, enVela: false })
-      .expect(400);
-    expect(sinPieza.body.message).toMatch(/jabón, para la vela o para ambos/);
+    // Validaciones: pieza, hex y campos que ya no existen.
+    await crear({ nombre: 'Gris', hex: '#888888' }).expect(400);
+    await crear({ pieza: 'jabón', nombre: 'Gris', hex: '#888888' }).expect(400);
+    await crear({ pieza: 'vela', nombre: 'Verde', hex: 'verde' }).expect(400);
+    await crear({
+      pieza: 'vela',
+      nombre: 'Gris',
+      hex: '#888888',
+      enJabon: true,
+    }).expect(400);
 
-    await request(http)
-      .post('/api/kits/colores')
-      .set(auth)
-      .send({ nombre: 'Dorado', hex: '#C9A227', orden: -1 })
-      .expect(201);
-    const lista = await request(http)
-      .get('/api/kits/colores')
+    await crear({
+      pieza: 'vela',
+      nombre: 'Dorado',
+      hex: '#C9A227',
+      orden: -1,
+    }).expect(201);
+    const todos = await request(http).get('/api/colores').set(auth).expect(200);
+    expect(
+      todos.body.map(
+        (c: { pieza: string; nombre: string }) => `${c.pieza}:${c.nombre}`,
+      ),
+    ).toEqual(['jabon:Rojo navidad', 'vela:Dorado', 'vela:Rojo navidad']);
+    const deVela = await request(http)
+      .get('/api/colores?pieza=vela')
       .set(auth)
       .expect(200);
-    expect(lista.body.map((c: { nombre: string }) => c.nombre)).toEqual([
-      'Dorado',
-      'Rojo navidad',
-    ]);
+    expect(deVela.body).toHaveLength(2);
+    await request(http).get('/api/colores?pieza=otra').set(auth).expect(400);
 
+    // Editar: nombre, tono y disponibilidad; la pieza no cambia.
     const editado = await request(http)
-      .patch(`/api/kits/colores/${rojo.body.id}`)
+      .patch(`/api/colores/${rojoVela.body.id}`)
       .set(auth)
-      .send({ disponible: false, enVela: true })
+      .send({ hex: '#aa0000', disponible: false })
       .expect(200);
-    expect(editado.body).toMatchObject({ disponible: false, enVela: true });
+    expect(editado.body).toMatchObject({
+      pieza: 'vela',
+      hex: '#AA0000',
+      disponible: false,
+    });
     await request(http)
-      .patch(`/api/kits/colores/${rojo.body.id}`)
+      .patch(`/api/colores/${rojoVela.body.id}`)
       .set(auth)
-      .send({ enJabon: false, enVela: false })
+      .send({ pieza: 'jabon' })
       .expect(400);
     await request(http)
-      .patch(`/api/kits/colores/${rojo.body.id}`)
+      .patch(`/api/colores/${rojoVela.body.id}`)
       .set(auth)
       .send({ nombre: 'dorado' })
       .expect(409);
+    // "Dorado" solo existe en vela: el jabón sí puede llamarse así.
+    await request(http)
+      .patch(`/api/colores/${rojoJabon.body.id}`)
+      .set(auth)
+      .send({ nombre: 'Dorado' })
+      .expect(200);
+
+    // La ruta vieja de los kits sigue respondiendo (solo lectura) con enJabon / enVela.
+    const viejos = await request(http)
+      .get('/api/kits/colores')
+      .set(auth)
+      .expect(200);
+    expect(viejos.body).toHaveLength(3);
+    expect(viejos.body[0]).toMatchObject({
+      nombre: 'Dorado',
+      hex: '#B3202A',
+      enJabon: true,
+      enVela: false,
+    });
+    expect(viejos.body[0].pieza).toBeUndefined();
+    await request(http)
+      .post('/api/kits/colores')
+      .set(auth)
+      .send({ nombre: 'Azul', hex: '#0000FF' })
+      .expect(404);
 
     await request(http)
-      .delete(`/api/kits/colores/${rojo.body.id}`)
+      .delete(`/api/colores/${rojoVela.body.id}`)
       .set(auth)
       .expect(204);
     await request(http)
-      .delete(`/api/kits/colores/${rojo.body.id}`)
+      .delete(`/api/colores/${rojoVela.body.id}`)
       .set(auth)
       .expect(404);
+  });
 
-    // Los aromas funcionan igual, sin hex.
+  it('administra los aromas de los kits', async () => {
+    const auth = { Authorization: `Bearer ${token}` };
+    await request(http).get('/api/kits/aromas').expect(401);
+
     const canela = await request(http)
       .post('/api/kits/aromas')
       .set(auth)
@@ -900,14 +944,14 @@ describe('API (e2e)', () => {
 
   it('crea pedidos de velas sin token con opciones disponibles, y solo el panel los lista y los borra', async () => {
     const auth = { Authorization: `Bearer ${token}` };
-    // Colores y aromas: los de los kits marcados para la vela y disponibles.
+    // Colores: los de vela disponibles. Aromas: los de los kits marcados para la vela.
     for (const color of [
-      { nombre: 'Azul cielo', hex: '#87CEEB' },
-      { nombre: 'Blanco', hex: '#FFFFFF' },
-      { nombre: 'Verde jabón', hex: '#00AA00', enVela: false },
+      { pieza: 'vela', nombre: 'Azul cielo', hex: '#87CEEB' },
+      { pieza: 'vela', nombre: 'Blanco', hex: '#FFFFFF' },
+      { pieza: 'jabon', nombre: 'Verde jabón', hex: '#00AA00' },
     ]) {
       await request(http)
-        .post('/api/kits/colores')
+        .post('/api/colores')
         .set(auth)
         .send(color)
         .expect(201);

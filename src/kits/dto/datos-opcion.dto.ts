@@ -4,7 +4,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  Matches,
   Max,
   MaxLength,
   Min,
@@ -52,24 +51,4 @@ export class CrearAromaDto extends ActualizarAromaDto {
   @MinLength(1, { message: 'Ponle nombre' })
   @MaxLength(60)
   declare nombre: string;
-}
-
-const REGEX_HEX = /^#[0-9a-fA-F]{6}$/;
-const MENSAJE_HEX = 'hex: usa el formato #RRGGBB (por ejemplo #B3202A)';
-
-export class ActualizarColorDto extends ActualizarAromaDto {
-  @IsOptional()
-  @Matches(REGEX_HEX, { message: MENSAJE_HEX })
-  hex?: string;
-}
-
-export class CrearColorDto extends ActualizarColorDto {
-  @limpiarTexto()
-  @IsString()
-  @MinLength(1, { message: 'Ponle nombre' })
-  @MaxLength(60)
-  declare nombre: string;
-
-  @Matches(REGEX_HEX, { message: MENSAJE_HEX })
-  declare hex: string;
 }
